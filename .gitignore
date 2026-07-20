@@ -1,0 +1,45 @@
+# ── Node / Electron ─────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# ── Next.js (unused but present in scaffold) ────────────────────────
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# ── Environment / Secrets ────────────────────────────────────────────
+# NEVER commit these — API keys live here
+.env
+.env.*
+*.pem
+
+# ── Electron userData (where encrypted keys are stored) ─────────────
+# These are auto-generated in AppData, never in the project folder.
+# Listed here as a safety net.
+hub-keys.json
+hub-settings.json
+
+# ── OS / Editor ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+
+# ── Yarn ─────────────────────────────────────────────────────────────
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ── Misc ─────────────────────────────────────────────────────────────
+/coverage
+.vercel

@@ -1,0 +1,31 @@
+{
+  "name": "nexusdesk",
+  "version": "1.0.0",
+  "description": "Premium desktop crypto trading command center with AI Co-Pilot, arbitrage scanner, and live market intelligence.",
+  "private": true,
+  "main": "electron/main.cjs",
+  "homepage": "https://github.com/YOUR_USERNAME/NexusDesk",
+  "author": "NexusDesk",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "desktop": "electron ."
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "ccxt": "^4.5.67"
+  },
+  "devDependencies": {
+    "electron": "^37.10.3"
+  },
+  "keywords": [
+    "crypto",
+    "trading",
+    "electron",
+    "arbitrage",
+    "ai",
+    "gemini",
+    "coinmarketcap",
+    "binance"
+  ]
+}

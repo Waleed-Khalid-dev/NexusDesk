@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Arbitrage Scanner</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg-deep:    hsl(240, 10%, 4%);
+        --bg-base:    hsl(240, 8%, 7%);
+        --bg-surface: hsl(240, 7%, 11%);
+        --bg-raised:  hsl(240, 6%, 15%);
+        --border:     hsl(240, 5%, 18%);
+        --border-lit: hsl(240, 5%, 26%);
+        --text-hi:    hsl(220, 15%, 96%);
+        --text-mid:   hsl(220, 10%, 65%);
+        --text-lo:    hsl(220, 8%, 38%);
+        --accent-orange: hsl(28, 95%, 58%);
+        --accent-orange-glow: hsla(28, 95%, 58%, 0.18);
+        --accent-green: hsl(142, 68%, 52%);
+        --accent-red:   hsl(0, 78%, 62%);
+        --accent-amber: hsl(40, 95%, 54%);
+      }
+
+      html, body {
+        height: 100%;
+        background: var(--bg-deep);
+        color: var(--text-hi);
+        font-family: 'Inter', system-ui, sans-serif;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ─── Header ─────────────────────────────────────────────────── */
+      .header {
+        padding: 16px 20px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-surface);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+      }
+      .header::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent-orange), transparent);
+        opacity: 0.7;
+      }
+      .header-icon {
+        width: 36px; height: 36px;
+        background: linear-gradient(135deg, var(--accent-orange), hsl(28, 90%, 44%));
+        border-radius: 10px;
+        display: grid; place-items: center;
+        box-shadow: 0 0 16px var(--accent-orange-glow);
+        flex-shrink: 0;
+      }
+      .header-icon svg { width: 18px; height: 18px; color: #fff; }
+      .header-title { flex: 1; }
+      .header-title h1 {
+        font-size: 15px; font-weight: 700;
+        background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        letter-spacing: -0.02em;
+      }
+      .header-title p { font-size: 11px; color: var(--text-lo); margin-top: 2px; }
+
+      /* ─── Mode Tabs ──────────────────────────────────────────────── */
+      .modes {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-base);
+        flex-shrink: 0;
+      }
+      .mode-tab {
+        flex: 1;
+        padding: 11px 8px;
+        text-align: center;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-lo);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: 0.2s;
+        letter-spacing: 0.02em;
+      }
+      .mode-tab:hover { color: var(--text-hi); background: var(--bg-surface); }
+      .mode-tab.active { color: var(--accent-orange); border-bottom-color: var(--accent-orange); background: var(--bg-surface); }
+
+      /* ─── Controls ───────────────────────────────────────────────── */
+      .controls {
+        padding: 12px 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-base);
+        flex-shrink: 0;
+      }
+      .ticker-input {
+        flex: 1;
+        background: var(--bg-raised);
+        border: 1px solid var(--border-lit);
+        color: var(--text-hi);
+        padding: 9px 14px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        outline: none;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        transition: 0.2s;
+        caret-color: var(--accent-orange);
+      }
+      .ticker-input::placeholder { color: var(--text-lo); }
+      .ticker-input:focus { border-color: var(--accent-orange); box-shadow: 0 0 0 2px var(--accent-orange-glow); }
+
+      .btn-scan {
+        padding: 9px 20px;
+        background: linear-gradient(180deg, var(--accent-orange), hsl(28, 88%, 44%));
+        border: none;
+        color: #fff;
+        border-radius: 9px;
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex; align-items: center; gap: 6px;
+        box-shadow: 0 2px 10px var(--accent-orange-glow);
+        letter-spacing: 0.01em;
+      }
+      .btn-scan:hover { filter: brightness(1.1); box-shadow: 0 4px 18px var(--accent-orange-glow); }
+      .btn-scan:active { transform: scale(0.98); }
+      .btn-scan:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+      /* ─── Body ───────────────────────────────────────────────────── */
+      .body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+      .body::-webkit-scrollbar { width: 4px; }
+      .body::-webkit-scrollbar-track { background: transparent; }
+      .body::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 4px; }
+
+      /* ─── Opportunity Banner ─────────────────────────────────────── */
+      .opportunity {
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 18px;
+        display: none;
+        animation: slideIn 0.3s ease;
+      }
+      @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+      .opportunity.profitable {
+        background: linear-gradient(135deg, hsla(142, 68%, 52%, 0.08), transparent);
+        border: 1px solid hsla(142, 68%, 52%, 0.25);
+      }
+      .opportunity.flat {
+        background: linear-gradient(135deg, hsla(0, 78%, 62%, 0.06), transparent);
+        border: 1px solid hsla(0, 78%, 62%, 0.2);
+      }
+      .opportunity-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+      .opportunity.profitable .opportunity-label { color: var(--accent-green); }
+      .opportunity.flat .opportunity-label { color: var(--accent-red); }
+      .opportunity-details { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+      .opp-stat { display: flex; flex-direction: column; gap: 2px; }
+      .opp-stat .label { font-size: 10px; color: var(--text-lo); }
+      .opp-stat .value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--text-hi); }
+      .opp-stat .value.green { color: var(--accent-green); }
+      .opp-stat .value.red { color: var(--accent-red); }
+      .opp-arrow { font-size: 18px; color: var(--text-lo); }
+
+      /* ─── Table ──────────────────────────────────────────────────── */
+      .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+      .table-title { font-size: 11px; font-weight: 700; color: var(--text-lo); text-transform: uppercase; letter-spacing: 0.08em; }
+      .table-refresh { font-size: 10px; color: var(--text-lo); }
+
+      table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+      thead tr { border-bottom: 1px solid var(--border); }
+      thead th {
+        padding: 8px 12px; text-align: left;
+        font-size: 10px; font-weight: 700; color: var(--text-lo);
+        text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      thead th:not(:first-child) { text-align: right; }
+      tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+      tbody tr:hover { background: var(--bg-surface); }
+      tbody td { padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; vertical-align: middle; color: var(--text-mid); }
+      tbody td:not(:first-child) { text-align: right; }
+
+      .spread-pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+      .spread-pill.tight { background: hsla(142, 68%, 52%, 0.12); color: var(--accent-green); }
+      .spread-pill.wide  { background: hsla(0, 78%, 62%, 0.10); color: var(--accent-red); }
+      .spread-pill.mid   { background: hsla(40, 95%, 54%, 0.10); color: var(--accent-amber); }
+
+      .state-box { text-align: center; padding: 50px 20px; color: var(--text-lo); font-size: 13px; }
+      .state-box .icon { font-size: 32px; margin-bottom: 12px; }
+
+      .spinner {
+        display: inline-block; width: 16px; height: 16px;
+        border: 2px solid var(--border-lit);
+        border-top-color: var(--accent-orange);
+        border-radius: 50%; animation: spin 0.7s linear infinite;
+        vertical-align: middle; margin-right: 6px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .change-green { color: var(--accent-green); }
+      .change-red { color: var(--accent-red); }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4l3 3-3 3"/><path d="M21 7H9"/><path d="M6 20l-3-3 3-3"/><path d="M3 17h12"/></svg>
+      </div>
+      <div class="header-title">
+        <h1>Arbitrage Scanner</h1>
+        <p>Cross-exchange price spread analysis — requires at least 2 connected exchanges</p>
+      </div>
+    </div>
+
+    <div class="modes">
+      <div class="mode-tab active" data-mode="single">Single Pair</div>
+      <div class="mode-tab" data-mode="gainers">Top 100 Gainers</div>
+      <div class="mode-tab" data-mode="losers">Top 100 Losers</div>
+    </div>
+
+    <div class="controls">
+      <input class="ticker-input" id="tickerInput" value="BTC/USDT" placeholder="BTC/USDT" />
+      <button class="btn-scan" id="scanBtn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Scan Now
+      </button>
+    </div>
+
+    <div class="body">
+      <div class="opportunity" id="opportunityBanner">
+        <div class="opportunity-label" id="oppLabel">🎯 Arbitrage Opportunity Detected</div>
+        <div class="opportunity-details" id="oppDetails"></div>
+      </div>
+
+      <div class="table-header">
+        <span class="table-title" id="tableTitle">Results</span>
+        <span class="table-refresh" id="lastScan"></span>
+      </div>
+
+      <div id="tableWrap">
+        <div class="state-box">
+          <div class="icon">📡</div>
+          <div>Select a mode and click <strong>Scan Now</strong> to begin.</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require('electron');
+
+      let currentMode = 'single';
+      const modeTabs = document.querySelectorAll('.mode-tab');
+      const scanBtn = document.getElementById('scanBtn');
+      const tickerInput = document.getElementById('tickerInput');
+      const tableWrap = document.getElementById('tableWrap');
+      const oppBanner = document.getElementById('opportunityBanner');
+
+      modeTabs.forEach(tab => {
+        tab.onclick = () => {
+          modeTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentMode = tab.dataset.mode;
+          tickerInput.style.display = currentMode === 'single' ? 'block' : 'none';
+        };
+      });
+
+      function formatPrice(n) {
+        if (!n && n !== 0) return '—';
+        if (n >= 1000) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (n >= 1) return n.toFixed(4);
+        return n.toPrecision(5);
+      }
+
+      function renderSingleTable(data) {
+        const { rows, opportunity, symbol } = data;
+        document.getElementById('tableTitle').textContent = `Exchange Prices — ${symbol}`;
+
+        if (opportunity) {
+          oppBanner.style.display = 'block';
+          oppBanner.className = 'opportunity ' + (opportunity.profitable ? 'profitable' : 'flat');
+          document.getElementById('oppLabel').textContent = opportunity.profitable ? '🎯 Arbitrage Opportunity Detected' : '⚠️ No Profitable Spread';
+          document.getElementById('oppDetails').innerHTML = `
+            <div class="opp-stat"><span class="label">Buy On</span><span class="value">${opportunity.buyOn}</span></div>
+            <div class="opp-stat"><span class="label">Buy At</span><span class="value">$${formatPrice(opportunity.buyAt)}</span></div>
+            <div class="opp-arrow">→</div>
+            <div class="opp-stat"><span class="label">Sell On</span><span class="value">${opportunity.sellOn}</span></div>
+            <div class="opp-stat"><span class="label">Sell At</span><span class="value">$${formatPrice(opportunity.sellAt)}</span></div>
+            <div class="opp-stat"><span class="label">Net Spread</span><span class="value ${opportunity.profitable ? 'green' : 'red'}">${opportunity.spreadPct}%</span></div>
+          `;
+        } else {
+          oppBanner.style.display = 'none';
+        }
+
+        const validRows = rows.filter(r => !r.error);
+        const maxBid = validRows.length ? Math.max(...validRows.map(r => r.bid || 0)) : null;
+        const minAsk = validRows.length ? Math.min(...validRows.map(r => r.ask || Infinity)) : null;
+
+        tableWrap.innerHTML = `
+          <table>
+            <thead><tr><th>Exchange</th><th>Last</th><th>Bid</th><th>Ask</th><th>Spread %</th></tr></thead>
+            <tbody>
+              ${rows.map(r => {
+                if (r.error) return `<tr><td colspan="5" style="color:#52525b">${r.exchange}: ${r.error}</td></tr>`;
+                const sc = r.spread > 0 ? (r.spread > 0.2 ? 'tight' : 'mid') : 'wide';
+                return `
+                  <tr>
+                    <td><strong style="font-family:Inter;color:#fff">${r.exchange}</strong></td>
+                    <td>$${formatPrice(r.last)}</td>
+                    <td style="color:${r.bid === maxBid ? '#4ade80' : ''}">$${formatPrice(r.bid)}</td>
+                    <td style="color:${r.ask === minAsk ? '#f87171' : ''}">$${formatPrice(r.ask)}</td>
+                    <td><span class="spread-pill ${sc}">${r.spread ? r.spread.toFixed(4) : 0}%</span></td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function renderTopTable(data) {
+        oppBanner.style.display = 'none';
+        const title = data.mode === 'gainers' ? 'Top 100 Gainers' : 'Top 100 Losers';
+        document.getElementById('tableTitle').textContent = `Arbitrage Opportunities — ${title}`;
+
+        if (data.opportunities.length === 0) {
+          tableWrap.innerHTML = `<div class="state-box">No common /USDT pairs found across your connected exchanges.</div>`;
+          return;
+        }
+
+        tableWrap.innerHTML = `
+          <table>
+            <thead><tr><th>Coin</th><th>24h Change</th><th>Buy On</th><th>Sell On</th><th>Max Spread %</th></tr></thead>
+            <tbody>
+              ${data.opportunities.map(o => {
+                const c24 = o.change24h;
+                const sc = o.spreadPct > 0.1 ? 'tight' : (o.spreadPct > 0 ? 'mid' : 'wide');
+                return `
+                  <tr>
+                    <td><strong style="font-family:Inter;color:#fff">${o.symbol}</strong></td>
+                    <td class="${c24 > 0 ? 'change-green' : (c24 < 0 ? 'change-red' : '')}">${c24 > 0 ? '+' : ''}${c24.toFixed(2)}%</td>
+                    <td style="color:#f87171">${o.buyOn} @ $${formatPrice(o.buyAt)}</td>
+                    <td style="color:#4ade80">${o.sellOn} @ $${formatPrice(o.sellAt)}</td>
+                    <td><span class="spread-pill ${sc}">${o.spreadPct.toFixed(4)}%</span></td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      scanBtn.onclick = async () => {
+        scanBtn.disabled = true;
+        scanBtn.innerHTML = '<span class="spinner"></span>Scanning...';
+        tableWrap.innerHTML = `<div class="state-box"><div class="icon"><span class="spinner"></span></div><div>${currentMode === 'single' ? 'Fetching pair...' : 'Fetching 100s of markets from all connected exchanges...'}</div></div>`;
+
+        try {
+          if (currentMode === 'single') {
+            const res = await ipcRenderer.invoke('scan-arbitrage', tickerInput.value.trim() || 'BTC');
+            if (res.success) renderSingleTable(res);
+            else tableWrap.innerHTML = `<div class="state-box">⚠️ ${res.error}</div>`;
+          } else {
+            const res = await ipcRenderer.invoke('scan-top-arbitrage', currentMode);
+            if (res.success) renderTopTable(res);
+            else tableWrap.innerHTML = `<div class="state-box">⚠️ ${res.error}</div>`;
+          }
+        } catch (e) {
+          tableWrap.innerHTML = `<div class="state-box">❌ Error: ${e.message}</div>`;
+        }
+
+        scanBtn.disabled = false;
+        scanBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Scan Now`;
+        document.getElementById('lastScan').textContent = 'Last scan: ' + new Date().toLocaleTimeString();
+      };
+    </script>
+  </body>
+</html>

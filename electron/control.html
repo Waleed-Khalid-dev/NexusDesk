@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
+    />
+    <title>Crypto Hub Controls</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background: #09090b;
+        color: #f4f4f5;
+        user-select: none;
+        -webkit-app-region: drag;
+      }
+      /* Dark translucent gradient background */
+      .bar {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 16px 10px;
+        border-bottom: 1px solid #27272a;
+        background: linear-gradient(180deg, #18181b 0%, #09090b 100%);
+        position: relative;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      /* --- BRAND --- */
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-right: 8px;
+      }
+      .logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 15px;
+        color: #fff;
+        background: linear-gradient(135deg, #10b981, #0ea5e9);
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      }
+
+      /* --- OMNIBAR (Search & Exchange) --- */
+      .omnibar {
+        display: flex;
+        align-items: center;
+        background: #18181bcc;
+        border: 1px solid #3f3f46;
+        border-radius: 12px;
+        padding: 4px 12px;
+        -webkit-app-region: no-drag;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+      }
+      .omnibar:focus-within {
+        border-color: #10b98199;
+        box-shadow: 0 0 0 2px #10b98133, inset 0 2px 4px rgba(0,0,0,0.2);
+      }
+      .omnibar select {
+        background: transparent;
+        color: #a1a1aa;
+        border: none;
+        outline: none;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        padding-right: 6px;
+        border-right: 1px solid #3f3f46;
+        margin-right: 8px;
+      }
+      .omnibar select:focus {
+        color: #fafafa;
+      }
+      .omnibar select option {
+        color: #000;
+      }
+      .omnibar input {
+        width: 80px;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: #fafafa;
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .omnibar input::placeholder {
+        color: #52525b;
+      }
+      .search-icon {
+        color: #71717a;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .search-icon:hover {
+        color: #10b981;
+      }
+
+      /* --- ACTIVE TICKER DISPLAY --- */
+      .active-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border-radius: 10px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+      .active-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 8px #10b981;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% { opacity: 0.6; box-shadow: 0 0 4px #10b981; }
+        50% { opacity: 1; box-shadow: 0 0 10px #10b981; }
+        100% { opacity: 0.6; box-shadow: 0 0 4px #10b981; }
+      }
+      .active-pill .t {
+        color: #10b981;
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+        text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      }
+
+      .spacer { flex: 1; }
+
+      /* --- ICON BUTTON CLUSTER --- */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #18181b;
+        border: 1px solid #3f3f46;
+        border-radius: 10px;
+        padding: 4px;
+        -webkit-app-region: no-drag;
+      }
+      .icon-btn {
+        background: transparent;
+        border: none;
+        color: #a1a1aa;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .icon-btn:hover {
+        background: #27272a;
+        color: #fafafa;
+      }
+      .icon-btn.active {
+        color: #34d399;
+        background: rgba(52, 211, 153, 0.1);
+      }
+      .icon-btn.sky:hover { color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+      .icon-btn.orange:hover { color: #fb923c; background: rgba(251, 146, 60, 0.1); }
+      .divider-v {
+        width: 1px;
+        height: 16px;
+        background: #3f3f46;
+        margin: 0 2px;
+      }
+
+      /* --- CMC TOGGLE --- */
+      .btn-cmc {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(180deg, #92400e 0%, #78350f 100%);
+        color: #fde68a;
+        border: 1px solid #b45309;
+        border-radius: 10px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-app-region: no-drag;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      }
+      .btn-cmc svg { width: 14px; height: 14px; }
+      .btn-cmc:hover {
+        background: linear-gradient(180deg, #b45309 0%, #92400e 100%);
+        box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+      }
+      .btn-cmc.active {
+        background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+        color: #1c1917;
+        border-color: #fcd34d;
+        box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+      }
+
+      /* --- CMC TABS --- */
+      .cmc-tabs {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid #3f3f46;
+        border-radius: 10px;
+        background: #18181b;
+        padding: 4px;
+        -webkit-app-region: no-drag;
+      }
+      .cmc-tabs.visible { display: flex; }
+      .cmc-tab {
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #71717a;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        transition: 0.2s ease;
+      }
+      .cmc-tab:hover {
+        color: #fafafa;
+        background: #27272a;
+      }
+      .cmc-tab.on {
+        background: #3f3f46;
+        color: #fbbf24;
+        box-shadow: inset 0 0 0 1px #f59e0b55;
+      }
+
+      /* --- QUICK COINS (TICKER TAPE) --- */
+      .quick {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        -webkit-app-region: no-drag;
+      }
+      .quick-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #52525b;
+        font-weight: 700;
+        margin-right: 4px;
+      }
+      .chip {
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #18181b;
+        border: 1px solid #27272a;
+        color: #a1a1aa;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .chip:hover {
+        background: #27272a;
+        color: #fafafa;
+        border-color: #3f3f46;
+      }
+      .chip.on {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+      }
+      .hint {
+        font-size: 11px;
+        color: #52525b;
+        margin-left: 8px;
+        font-weight: 500;
+      }
+
+      /* Separator line above CMC panel */
+      .cmc-divider {
+        display: none;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #f59e0b88, #f59e0b, #f59e0b88, transparent);
+        animation: divider-glow 2s ease-in-out infinite alternate;
+      }
+      .cmc-divider.visible { display: block; }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <div class="row">
+        <!-- BRAND -->
+        <div class="brand">
+          <div class="logo">₿</div>
+          <h1>Crypto Hub</h1>
+        </div>
+
+        <!-- OMNIBAR -->
+        <div class="omnibar">
+          <select id="exchange">
+            <option value="BINANCE">BINANCE</option>
+            <option value="BYBIT">BYBIT</option>
+            <option value="MEXC">MEXC</option>
+            <option value="OKX">OKX</option>
+            <option value="COINBASE">COINBASE</option>
+            <option value="KUCOIN">KUCOIN</option>
+            <option value="BITGET">BITGET</option>
+          </select>
+          <input id="sym" spellcheck="false" autocomplete="off" placeholder="BTC" value="BTC" />
+          <svg class="search-icon" id="go" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+
+        <!-- ACTIVE TICKER -->
+        <div class="active-pill">
+          <div class="dot"></div>
+          <span class="t" id="active">BTC</span>
+        </div>
+
+        <div class="spacer"></div>
+
+        <!-- TOOLBAR CLUSTER -->
+        <div class="toolbar">
+          <button class="icon-btn" id="toggleLeft" title="Toggle Left Panel (Bubbles)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+          </button>
+          <button class="icon-btn" id="toggleRight" title="Toggle Right Panel (Heatmap)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+          </button>
+          <button class="icon-btn" id="resetLayout" title="Reset Layout">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          </button>
+          
+          <div class="divider-v"></div>
+          
+          <button class="icon-btn sky" id="reloadChart" title="Reload Chart">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          </button>
+          <button class="icon-btn orange" id="reloadHeat" title="Reload Heatmap">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+          </button>
+          <button class="icon-btn" id="openPortfolio" title="Open Portfolio Vault (API Keys)" style="color: #10b981;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </button>
+          <button class="icon-btn sky" id="toggleAi" title="Toggle AI Co-Pilot">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
+          </button>
+          <button class="icon-btn" id="openArbitrage" title="Open Arbitrage Scanner" style="color: #fb923c;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4l3 3-3 3"/><path d="M21 7H9"/><path d="M6 20l-3-3 3-3"/><path d="M3 17h12"/></svg>
+          </button>
+        </div>
+
+        <!-- CMC PANEL CONTROLS -->
+        <div class="cmc-tabs" id="cmcTabs">
+          <button class="cmc-tab on" id="tabMarket">📊 Market</button>
+          <button class="cmc-tab" id="tabCoin">🪙 <span id="tabCoinLabel">BTC</span></button>
+        </div>
+        <button class="btn-cmc" id="cmcToggle" title="Toggle CMC Intelligence Panel">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Intelligence
+        </button>
+      </div>
+
+      <div class="row quick" id="quick"></div>
+      
+      <!-- Amber divider shown when CMC panel is open -->
+      <div class="cmc-divider" id="cmcDivider"></div>
+    </div>
+
+    <script>
+      const sym = document.getElementById("sym");
+      const exchange = document.getElementById("exchange");
+      const active = document.getElementById("active");
+      const quick = document.getElementById("quick");
+      const toggleLeft = document.getElementById("toggleLeft");
+      const toggleRight = document.getElementById("toggleRight");
+      const cmcToggleBtn = document.getElementById("cmcToggle");
+      const cmcTabs = document.getElementById("cmcTabs");
+      const cmcDivider = document.getElementById("cmcDivider");
+      const tabMarket = document.getElementById("tabMarket");
+      const tabCoin = document.getElementById("tabCoin");
+      const tabCoinLabel = document.getElementById("tabCoinLabel");
+
+      let state = {
+        ticker: "BTC",
+        exchange: "BINANCE",
+        leftCollapsed: false,
+        rightCollapsed: false,
+        cmcPanelOpen: false,
+        cmcActiveTab: "market",
+        leftPct: 0.22,
+        rightPct: 0.28,
+        quick: ["BTC", "ETH", "SOL", "XRP", "BNB", "DOGE", "ADA", "AVAX", "LINK", "DOT", "SUI", "PEPE"],
+      };
+
+      function applySymbol() {
+        const t = (sym.value || "BTC").trim().toUpperCase();
+        const e = exchange.value;
+        window.hub.setSymbol({ ticker: t, exchange: e });
+      }
+
+      function renderQuick() {
+        quick.innerHTML = "";
+        const tag = document.createElement("span");
+        tag.className = "quick-label";
+        tag.textContent = "Quick:";
+        quick.appendChild(tag);
+
+        for (const c of state.quick) {
+          const b = document.createElement("button");
+          b.className = "chip" + (c === state.ticker ? " on" : "");
+          b.textContent = c;
+          b.onclick = () => window.hub.setSymbol({ ticker: c, exchange: state.exchange });
+          quick.appendChild(b);
+        }
+
+        const hint = document.createElement("span");
+        hint.className = "hint";
+        hint.textContent = "Drag green bars between panes to resize · Layout & Logins persist automatically.";
+        quick.appendChild(hint);
+      }
+
+      function renderToggles() {
+        toggleLeft.classList.toggle("active", !state.leftCollapsed);
+        toggleRight.classList.toggle("active", !state.rightCollapsed);
+        document.getElementById("toggleAi").classList.toggle("active", !!state.aiPanelOpen);
+      }
+
+      function applyState(s) {
+        state = { ...state, ...s };
+        active.textContent = state.ticker;
+        tabCoinLabel.textContent = state.ticker;
+        if (document.activeElement !== sym) sym.value = state.ticker;
+        if (state.exchange && exchange.value !== state.exchange) exchange.value = state.exchange;
+
+        // CMC panel open/closed styling
+        cmcToggleBtn.classList.toggle("active", !!state.cmcPanelOpen);
+        cmcTabs.classList.toggle("visible", !!state.cmcPanelOpen);
+        cmcDivider.classList.toggle("visible", !!state.cmcPanelOpen);
+
+        // Tab active state
+        tabMarket.classList.toggle("on", state.cmcActiveTab === "market");
+        tabCoin.classList.toggle("on", state.cmcActiveTab === "coin");
+
+        renderQuick();
+        renderToggles();
+      }
+
+      document.getElementById("go").onclick = applySymbol;
+      sym.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") applySymbol();
+      });
+      toggleLeft.onclick = () => window.hub.toggleLeft();
+      toggleRight.onclick = () => window.hub.toggleRight();
+      document.getElementById("toggleAi").onclick = () => window.hub.toggleAi();
+      document.getElementById("resetLayout").onclick = () => window.hub.resetLayout();
+      document.getElementById("openPortfolio").onclick = () => window.hub.openPortfolio();
+      document.getElementById("reloadChart").onclick = () => window.hub.reloadPane("chart");
+      document.getElementById("reloadHeat").onclick = () => window.hub.reloadPane("heatmap");
+      document.getElementById("openArbitrage").onclick = () => window.hub.openArbitrage();
+
+      // CMC Panel
+      cmcToggleBtn.onclick = () => window.hub.cmcToggle();
+      tabMarket.onclick = () => window.hub.cmcTab("market");
+      tabCoin.onclick = () => window.hub.cmcTab("coin");
+
+      window.hub.getState().then(applyState);
+      window.hub.onState(applyState);
+    </script>
+  </body>
+</html>

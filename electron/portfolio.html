@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Command Center Vault</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg-deep:    hsl(240, 10%, 4%);
+        --bg-base:    hsl(240, 8%, 7%);
+        --bg-surface: hsl(240, 7%, 11%);
+        --bg-raised:  hsl(240, 6%, 15%);
+        --border:     hsl(240, 5%, 18%);
+        --border-lit: hsl(240, 5%, 26%);
+        --text-hi:    hsl(220, 15%, 96%);
+        --text-mid:   hsl(220, 10%, 65%);
+        --text-lo:    hsl(220, 8%, 40%);
+        --accent-green: hsl(158, 64%, 52%);
+        --accent-green-glow: hsla(158, 64%, 52%, 0.12);
+        --accent-sky: hsl(200, 90%, 60%);
+        --accent-amber: hsl(38, 92%, 50%);
+        --accent-amber-glow: hsla(38, 92%, 50%, 0.1);
+        --accent-red: hsl(0, 72%, 58%);
+      }
+
+      html, body {
+        background: var(--bg-deep);
+        color: var(--text-hi);
+        font-family: 'Inter', system-ui, sans-serif;
+        min-height: 100%;
+        user-select: none;
+      }
+
+      .container {
+        padding: 28px 24px;
+        max-width: 620px;
+        margin: 0 auto;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+      .page-icon {
+        width: 42px; height: 42px;
+        background: linear-gradient(135deg, var(--accent-green), hsl(158, 70%, 38%));
+        border-radius: 12px;
+        display: grid; place-items: center;
+        box-shadow: 0 0 20px var(--accent-green-glow);
+        flex-shrink: 0;
+      }
+      .page-icon svg { width: 20px; height: 20px; color: #fff; }
+      .page-title h1 {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        background: linear-gradient(135deg, var(--accent-green), var(--accent-sky));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .page-title p {
+        font-size: 11px;
+        color: var(--text-lo);
+        margin-top: 2px;
+      }
+
+      /* ─── Cards ─────────────────────────────────────────────────── */
+      .card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 16px;
+        transition: border-color 0.2s;
+      }
+      .card:hover { border-color: var(--border-lit); }
+      .card-danger {
+        background: linear-gradient(135deg, hsla(38, 92%, 50%, 0.04), transparent);
+        border-color: hsla(38, 92%, 50%, 0.2);
+      }
+      .card-danger:hover { border-color: hsla(38, 92%, 50%, 0.35); }
+
+      .card-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-mid);
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .card-title svg { width: 14px; height: 14px; flex-shrink: 0; }
+      .card-title-amber { color: var(--accent-amber); }
+
+      /* ─── Forms ─────────────────────────────────────────────────── */
+      .form-group { margin-bottom: 14px; }
+      .form-group:last-child { margin-bottom: 0; }
+      label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-lo);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+      input, select {
+        width: 100%;
+        background: var(--bg-raised);
+        border: 1px solid var(--border-lit);
+        color: var(--text-hi);
+        padding: 10px 13px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-family: 'Inter', monospace;
+        outline: none;
+        transition: 0.2s ease;
+      }
+      input::placeholder { color: var(--text-lo); }
+      input:focus, select:focus {
+        border-color: var(--accent-green);
+        box-shadow: 0 0 0 2px var(--accent-green-glow);
+        background: var(--bg-base);
+      }
+      .row { display: flex; gap: 12px; }
+      .row .form-group { flex: 1; }
+
+      /* ─── Buttons ────────────────────────────────────────────────── */
+      .btn {
+        background: linear-gradient(180deg, var(--accent-green), hsl(158, 70%, 38%));
+        color: #fff;
+        font-weight: 700;
+        font-size: 12.5px;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        box-shadow: 0 2px 10px var(--accent-green-glow);
+      }
+      .btn:hover { filter: brightness(1.1); box-shadow: 0 4px 16px hsla(158, 64%, 52%, 0.3); }
+      .btn:active { transform: scale(0.98); }
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-mid);
+        border: 1px solid var(--border-lit);
+        box-shadow: none;
+      }
+      .btn-ghost:hover { background: var(--bg-raised); color: var(--text-hi); box-shadow: none; }
+      .btn-amber {
+        background: linear-gradient(180deg, hsl(38, 80%, 44%), hsl(38, 90%, 36%));
+        color: hsl(38, 100%, 90%);
+        box-shadow: 0 2px 10px var(--accent-amber-glow);
+      }
+      .btn-amber:hover { box-shadow: 0 4px 16px hsla(38, 92%, 50%, 0.3); }
+
+      /* ─── Status ─────────────────────────────────────────────────── */
+      .status-msg {
+        margin-top: 12px;
+        font-size: 12px;
+        padding: 9px 13px;
+        border-radius: 8px;
+        display: none;
+        animation: fade-in 0.2s ease;
+      }
+      @keyframes fade-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+      .status-ok { background: hsla(158, 64%, 52%, 0.08); color: var(--accent-green); border: 1px solid hsla(158, 64%, 52%, 0.2); }
+      .status-err { background: hsla(0, 72%, 58%, 0.08); color: var(--accent-red); border: 1px solid hsla(0, 72%, 58%, 0.2); }
+
+      /* ─── Balance Grid ───────────────────────────────────────────── */
+      .balance-grid { display: flex; flex-direction: column; gap: 8px; }
+      .asset-card {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: border-color 0.15s;
+      }
+      .asset-card:hover { border-color: var(--border-lit); }
+      .asset-name { font-weight: 700; font-size: 13px; color: var(--text-hi); }
+      .asset-bal { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-green); font-weight: 600; }
+
+      /* ─── Execution Toggle ───────────────────────────────────────── */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 16px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .toggle-label { font-size: 13px; font-weight: 600; color: var(--text-hi); margin-bottom: 3px; }
+      .toggle-sub { font-size: 11px; color: var(--text-lo); }
+      .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute; cursor: pointer; inset: 0;
+        background: var(--bg-raised);
+        border: 1px solid var(--border-lit);
+        border-radius: 26px;
+        transition: 0.3s;
+      }
+      .slider:before {
+        position: absolute; content: "";
+        height: 18px; width: 18px;
+        left: 3px; bottom: 3px;
+        background: var(--text-lo);
+        border-radius: 50%;
+        transition: 0.3s;
+      }
+      .switch input:checked + .slider { background: var(--accent-green); border-color: var(--accent-green); box-shadow: 0 0 12px var(--accent-green-glow); }
+      .switch input:checked + .slider:before { transform: translateX(20px); background: #fff; }
+
+      .help-text { font-size: 11px; color: var(--text-lo); line-height: 1.6; margin-bottom: 14px; }
+      .help-text strong { color: var(--accent-amber); }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-header">
+        <div class="page-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="page-title">
+          <h1>Command Center Vault</h1>
+          <p>Encrypted API key storage · All data stays local</p>
+        </div>
+      </div>
+
+      <!-- Exchange API Keys -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Exchange API Keys (Read-Only)
+        </div>
+        <div class="form-group">
+          <label>Exchange</label>
+          <select id="exchange">
+            <option value="binance">Binance</option>
+            <option value="bybit">Bybit</option>
+            <option value="mexc">MEXC</option>
+            <option value="okx">OKX</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="apiKey" placeholder="Enter API Key" />
+        </div>
+        <div class="form-group">
+          <label>API Secret</label>
+          <input type="password" id="apiSecret" placeholder="Enter API Secret" />
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <button class="btn" id="saveBtn">Save &amp; Encrypt</button>
+          <button class="btn btn-ghost" id="testBtn">Test Connection</button>
+        </div>
+        <div id="status" class="status-msg"></div>
+      </div>
+
+      <!-- AI Co-Pilot Settings -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 7.1"/><path d="M12 12l9.9 4.9"/></svg>
+          AI Co-Pilot — Gemini API
+        </div>
+        <div class="form-group">
+          <label>Gemini API Key</label>
+          <input type="password" id="aiKey" placeholder="Enter Gemini API Key (Free Tier)" />
+          <p style="font-size: 10px; color: var(--text-lo); margin-top: 7px;">Get your free key from <a href="https://aistudio.google.com/app/apikey" style="color: var(--accent-sky);" target="_blank">Google AI Studio</a>.</p>
+        </div>
+        <div style="margin-top: 16px;">
+          <button class="btn" id="saveAiBtn">Save AI Key</button>
+        </div>
+        <div id="aiStatus" class="status-msg"></div>
+      </div>
+
+      <!-- Portfolio Balances -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Live Portfolio Balances
+        </div>
+        <button class="btn btn-ghost" style="padding: 7px 14px; font-size: 12px; margin-bottom: 14px;" id="refreshBalBtn">↻ Refresh Balances</button>
+        <div class="balance-grid" id="balanceGrid">
+          <div class="asset-card" style="border-style: dashed; color: var(--text-lo); justify-content: center; font-size: 12px;">
+            No data. Connect an API key above.
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Info -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Network Info
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="btn btn-ghost" style="padding: 7px 14px; font-size: 12px;" id="fetchIpBtn">Fetch Public IP</button>
+          <span id="ipDisplay" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent-sky); font-weight: 600;"></span>
+        </div>
+      </div>
+
+      <!-- Market Intelligence APIs -->
+      <div class="card card-danger" style="--accent-amber: hsl(200,90%,60%); background: linear-gradient(135deg, hsla(200,90%,60%,0.04), transparent); border-color: hsla(200,90%,60%,0.2);">
+        <div class="card-title" style="color: hsl(200,90%,60%);">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+          Market Intelligence APIs
+        </div>
+        <div class="form-group">
+          <label>CoinMarketCap API Key &nbsp;·&nbsp; <span style="color: var(--text-lo); font-weight:400; text-transform:none; letter-spacing:0;">Free at coinmarketcap.com/api</span></label>
+          <input type="password" id="cmcKey" placeholder="Enter CMC API Key" />
+          <p style="font-size: 10px; color: var(--text-lo); margin-top: 6px;">Enables: Live market cap, volume, supply, top gainers/losers, Altcoin Season Index. Used by the AI Co-Pilot for context.</p>
+        </div>
+        <div style="margin-top: 14px;">
+          <button class="btn" style="background: linear-gradient(180deg, hsl(200,80%,50%), hsl(200,90%,40%)); box-shadow: 0 2px 10px hsla(200,90%,60%,0.2);" id="saveCmcBtn">Save CMC Key</button>
+        </div>
+        <div id="cmcStatus" class="status-msg"></div>
+
+        <div style="border-top: 1px solid var(--border); margin: 18px 0 14px;"></div>
+
+        <div class="form-group">
+          <label>LunarCrush API Key &nbsp;·&nbsp; <span style="color: var(--text-lo); font-weight:400; text-transform:none; letter-spacing:0;">Optional — lunarcrush.com</span></label>
+          <input type="password" id="lunarKey" placeholder="Enter LunarCrush API Key (optional)" />
+          <p style="font-size: 10px; color: var(--text-lo); margin-top: 6px;">Enables: Social sentiment scores, Galaxy Score, AltRank, social volume per coin. Enhances AI trade reasoning.</p>
+        </div>
+        <div style="margin-top: 14px;">
+          <button class="btn" style="background: linear-gradient(180deg, hsl(200,80%,50%), hsl(200,90%,40%)); box-shadow: 0 2px 10px hsla(200,90%,60%,0.2);" id="saveLunarBtn">Save LunarCrush Key</button>
+        </div>
+        <div id="lunarStatus" class="status-msg"></div>
+      </div>
+
+      <!-- Trade Execution Engine -->
+
+      <div class="card card-danger">
+        <div class="card-title card-title-amber">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Phase 4 · Trade Execution Engine
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Enable Trade Execution (Read/Write)</div>
+            <div class="toggle-sub">When ON, the AI can propose trades you manually confirm.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="execModeToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <p class="help-text">
+          Trade limits are enforced <strong>server-side</strong> — the AI <em>cannot</em> override them. No order executes without your click.
+        </p>
+
+        <div class="form-group">
+          <label>Max Position Size (USD) &nbsp;·&nbsp; <span style="color: var(--text-lo); font-weight: 400; text-transform: none; letter-spacing: 0;">Default: $50</span></label>
+          <input type="number" id="maxPositionInput" min="1" step="1" placeholder="e.g. 50" />
+          <p style="font-size: 10px; color: var(--text-lo); margin-top: 6px;">The AI cannot execute a single trade larger than this value.</p>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center; margin-top: 14px;">
+          <button class="btn btn-amber" id="saveMaxPosBtn">Save Limit</button>
+          <span id="maxPosStatus" style="font-size: 12px; display: none;"></span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require('electron');
+
+      const exchangeSelect = document.getElementById('exchange');
+      const apiKeyInput = document.getElementById('apiKey');
+      const apiSecretInput = document.getElementById('apiSecret');
+      const statusDiv = document.getElementById('status');
+      const balanceGrid = document.getElementById('balanceGrid');
+
+      function showStatus(msg, isErr) {
+        statusDiv.textContent = msg;
+        statusDiv.className = 'status-msg ' + (isErr ? 'status-err' : 'status-ok');
+        statusDiv.style.display = 'block';
+        setTimeout(() => statusDiv.style.display = 'none', 4000);
+      }
+
+      document.getElementById('saveBtn').onclick = async () => {
+        const exchange = exchangeSelect.value;
+        const key = apiKeyInput.value.trim();
+        const secret = apiSecretInput.value.trim();
+        if (!key || !secret) { showStatus("Please enter both Key and Secret", true); return; }
+        const res = await ipcRenderer.invoke('save-api-key', exchange, key, secret);
+        if (res.success) { showStatus("Keys saved and encrypted securely.", false); }
+        else { showStatus("Failed to save: " + res.error, true); }
+      };
+
+      document.getElementById('testBtn').onclick = async () => {
+        const exchange = exchangeSelect.value;
+        showStatus("Testing connection...", false);
+        statusDiv.style.display = 'block';
+        const res = await ipcRenderer.invoke('test-api-key', exchange);
+        if (res.success) { showStatus(`Connected! Found ${res.assetCount} assets.`, false); }
+        else { showStatus("Failed: " + res.error, true); }
+      };
+
+      document.getElementById('refreshBalBtn').onclick = async () => {
+        const exchange = exchangeSelect.value;
+        balanceGrid.innerHTML = '<span style="color:var(--text-lo);font-size:12px;">Fetching balances...</span>';
+        const res = await ipcRenderer.invoke('test-api-key', exchange);
+        if (res.success && res.balances) {
+          balanceGrid.innerHTML = '';
+          const assets = Object.keys(res.balances).filter(k => typeof res.balances[k] === 'number' && res.balances[k] > 0);
+          if (assets.length === 0) { balanceGrid.innerHTML = '<span style="color:var(--text-lo);font-size:12px;">No positive balances found.</span>'; return; }
+          for (const asset of assets) {
+            const val = res.balances[asset];
+            const div = document.createElement('div');
+            div.className = 'asset-card';
+            div.innerHTML = `<span class="asset-name">${asset}</span><span class="asset-bal">${val.toPrecision(5)}</span>`;
+            balanceGrid.appendChild(div);
+          }
+        } else {
+          balanceGrid.innerHTML = `<span style="color:var(--accent-red);font-size:12px;">Failed: ${res.error || 'Unknown error'}</span>`;
+        }
+      };
+
+      const aiKeyInput = document.getElementById('aiKey');
+      const aiStatusDiv = document.getElementById('aiStatus');
+      function showAiStatus(msg, isErr) {
+        aiStatusDiv.textContent = msg;
+        aiStatusDiv.className = 'status-msg ' + (isErr ? 'status-err' : 'status-ok');
+        aiStatusDiv.style.display = 'block';
+        setTimeout(() => aiStatusDiv.style.display = 'none', 4000);
+      }
+
+      document.getElementById('saveAiBtn').onclick = async () => {
+        const key = aiKeyInput.value.trim();
+        if (!key) { showAiStatus("Please enter an AI Key", true); return; }
+        const res = await ipcRenderer.invoke('save-ai-key', key);
+        if (res.success) { showAiStatus("AI Key saved securely.", false); }
+        else { showAiStatus("Failed: " + res.error, true); }
+      };
+
+      exchangeSelect.onchange = async () => {
+        const res = await ipcRenderer.invoke('has-api-key', exchangeSelect.value);
+        const placeholder = res.hasKey ? "•••••••••••••••• (Encrypted)" : "Enter API Key";
+        apiKeyInput.placeholder = placeholder;
+        apiSecretInput.placeholder = res.hasKey ? "•••••••••••••••• (Encrypted)" : "Enter API Secret";
+        apiKeyInput.value = "";
+        apiSecretInput.value = "";
+      };
+      exchangeSelect.onchange();
+
+      async function checkAiKey() {
+        const res = await ipcRenderer.invoke('has-api-key');
+        if (res.hasKey) { aiKeyInput.placeholder = "•••••••••••••••• (Encrypted)"; aiKeyInput.value = ""; }
+      }
+      checkAiKey();
+
+      document.getElementById('fetchIpBtn').onclick = async () => {
+        const ipDisplay = document.getElementById('ipDisplay');
+        ipDisplay.textContent = "Fetching...";
+        const res = await ipcRenderer.invoke('get-public-ip');
+        if (res.success) { ipDisplay.textContent = res.ip; }
+        else { ipDisplay.textContent = "Error: " + res.error; ipDisplay.style.color = "var(--accent-red)"; }
+      };
+
+      async function loadTradingSettings() {
+        const res = await ipcRenderer.invoke('get-trading-settings');
+        const input = document.getElementById('maxPositionInput');
+        input.value = res.maxPositionUSD !== res.defaultMaxPositionUSD ? res.maxPositionUSD : '';
+        const execMode = await ipcRenderer.invoke('get-execution-mode');
+        document.getElementById('execModeToggle').checked = execMode;
+      }
+      loadTradingSettings();
+
+      document.getElementById('execModeToggle').onchange = async (e) => {
+        await ipcRenderer.invoke('set-execution-mode', e.target.checked);
+      };
+
+      document.getElementById('saveMaxPosBtn').onclick = async () => {
+        const val = document.getElementById('maxPositionInput').value;
+        const statusEl = document.getElementById('maxPosStatus');
+        const res = await ipcRenderer.invoke('set-max-position', val);
+        statusEl.style.display = 'inline';
+        if (res.success) {
+          statusEl.textContent = `✓ Saved: $${res.maxPositionUSD}`;
+          statusEl.style.color = 'var(--accent-green)';
+        } else {
+          statusEl.textContent = '✗ ' + res.error;
+          statusEl.style.color = 'var(--accent-red)';
+        }
+        setTimeout(() => statusEl.style.display = 'none', 4000);
+      };
+
+      // CMC & LunarCrush key handlers
+      function showCmcStatus(msg, isErr) {
+        const el = document.getElementById('cmcStatus');
+        el.textContent = msg;
+        el.className = 'status-msg ' + (isErr ? 'status-err' : 'status-ok');
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 4000);
+      }
+      function showLunarStatus(msg, isErr) {
+        const el = document.getElementById('lunarStatus');
+        el.textContent = msg;
+        el.className = 'status-msg ' + (isErr ? 'status-err' : 'status-ok');
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 4000);
+      }
+
+      document.getElementById('saveCmcBtn').onclick = async () => {
+        const key = document.getElementById('cmcKey').value.trim();
+        if (!key) { showCmcStatus('Please enter a CMC API Key', true); return; }
+        const res = await ipcRenderer.invoke('save-cmc-key', key);
+        if (res.success) {
+          showCmcStatus('CMC Key saved and encrypted. AI Co-Pilot now has full market intelligence!', false);
+          document.getElementById('cmcKey').value = '';
+          document.getElementById('cmcKey').placeholder = '•••••••••••••••• (Encrypted)';
+        } else {
+          showCmcStatus('Failed: ' + res.error, true);
+        }
+      };
+
+      document.getElementById('saveLunarBtn').onclick = async () => {
+        const key = document.getElementById('lunarKey').value.trim();
+        if (!key) { showLunarStatus('Please enter a LunarCrush API Key', true); return; }
+        const res = await ipcRenderer.invoke('save-lunarcrush-key', key);
+        if (res.success) {
+          showLunarStatus('LunarCrush Key saved and encrypted.', false);
+          document.getElementById('lunarKey').value = '';
+          document.getElementById('lunarKey').placeholder = '•••••••••••••••• (Encrypted)';
+        } else {
+          showLunarStatus('Failed: ' + res.error, true);
+        }
+      };
+
+      // Pre-fill placeholder if CMC key already exists
+      ipcRenderer.invoke('has-api-key', 'cmc').then(res => {
+        if (res.hasKey) document.getElementById('cmcKey').placeholder = '•••••••••••••••• (Encrypted)';
+      });
+      ipcRenderer.invoke('has-api-key', 'lunarcrush').then(res => {
+        if (res.hasKey) document.getElementById('lunarKey').placeholder = '•••••••••••••••• (Encrypted)';
+      });
+    </script>
+  </body>
+</html>
