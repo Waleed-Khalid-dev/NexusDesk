@@ -9,7 +9,15 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "desktop": "electron ."
+    "desktop": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.nexusdesk.app",
+    "productName": "NexusDesk",
+    "win": {
+      "target": "nsis"
+    }
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
