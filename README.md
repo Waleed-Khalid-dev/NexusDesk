@@ -1,110 +1,139 @@
-# NexusDesk 🚀
+<div align="center">
 
-**A premium desktop crypto trading command center** powered by AI, built with Electron.
+# NexusDesk
 
-NexusDesk combines live market intelligence, cross-exchange arbitrage scanning, and an AI Co-Pilot (Google Gemini) into a single, beautiful dark-mode desktop application.
+**A premium desktop crypto trading command center.**
 
----
+AI Co-Pilot · Live Market Intelligence · Cross-Exchange Arbitrage · Encrypted Vault
 
-## ✨ Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Electron](https://img.shields.io/badge/Electron-37-47848F?logo=electron)](https://www.electronjs.org/)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4?logo=google)](https://aistudio.google.com/)
 
-| Feature | Description |
-|---|---|
-| 🤖 **AI Co-Pilot** | Google Gemini-powered assistant with live market context injected automatically |
-| 📊 **Market Pulse** | Real-time Fear & Greed Index, Altcoin Season Index, BTC dominance, top gainers/losers |
-| 🔄 **Arbitrage Scanner** | Cross-exchange spread detection for Single Pair, Top 100 Gainers, Top 100 Losers |
-| 🏦 **Command Center Vault** | Encrypted API key management for all exchanges + AI providers |
-| 🛡️ **Trade Safety System** | Manual confirmation modal — AI can never execute a trade without your click |
-| 📈 **Live Portfolio** | Real-time balance fetching from all connected exchanges (Spot + Futures) |
-| 🌍 **Market Intelligence** | CoinMarketCap + LunarCrush integration: market cap, volume, supply, social scores |
+</div>
 
 ---
 
-## 🛡️ Security Model
-
-Your API keys are **never stored in plain text**.
-
-- All keys are encrypted using **Windows DPAPI** (`electron.safeStorage`) — the same system Windows uses for browser passwords
-- Encrypted blobs are stored in `%AppData%\NexusDesk\` — **outside the project folder**
-- Even if someone clones this repo, they get zero keys — there is nothing to steal from the code
-- Trade execution requires a **physical toggle** in the Vault + a **manual confirm click** in the chat modal
+![NexusDesk Dashboard](docs/dashboard.png)
 
 ---
 
-## 🚀 Getting Started
+## What is NexusDesk?
 
-### Prerequisites
+NexusDesk is a desktop trading command center built with Electron. It gives you a unified workspace with live charts, an AI trading assistant, an arbitrage scanner, and a portfolio manager — all in one dark-mode, premium interface.
+
+The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin Season status, top gainers/losers, and full coin market data — automatically, on every message.
+
+---
+
+## Features
+
+- **AI Co-Pilot** — Ask anything. The AI already knows your balance, the Fear & Greed Index, top movers, BTC dominance, and market sentiment before you type a word.
+- **Market Pulse Strip** — A live ticker at the top of the AI panel showing F&G, Altcoin Season Index, BTC dominance, and top 3 gainers/losers. Auto-refreshes every 15 minutes.
+- **Arbitrage Scanner** — Detect price spreads across all your connected exchanges for a single pair, Top 100 Gainers, or Top 100 Losers.
+- **Command Center Vault** — Manage all your API keys (Binance, Gemini AI, CMC, LunarCrush) in one place. All keys are encrypted using Windows DPAPI — never stored in plain text.
+- **Trade Safety System** — The AI can *propose* a trade. You must manually click **Confirm** in a modal for it to execute. No trade ever runs automatically.
+- **Live Portfolio** — Real-time balance from all connected exchanges (Spot + Futures merged).
+- **Position Limits** — A server-side max position size check (default $50) that the AI cannot bypass.
+
+---
+
+## Security
+
+| What | Where | Safe? |
+|---|---|---|
+| API keys (Binance, CMC, etc.) | `%AppData%\NexusDesk\hub-keys.json` | ✅ Encrypted with Windows DPAPI |
+| App settings | `%AppData%\NexusDesk\hub-settings.json` | ✅ Encrypted, outside project folder |
+| Session cookies (TradingView, etc.) | Electron `userData` — OS managed | ✅ Never in the project |
+| Source code on GitHub | `D:\[Project]\NexusDesk` | ✅ Zero secrets in the code |
+
+> **If someone clones this repo, they get zero access to your accounts, keys, or sessions.** Encrypted data lives in `AppData` on your machine only.
+
+---
+
+## Getting Started
+
+### Requirements
+- Windows 10 or 11
 - [Node.js 18+](https://nodejs.org/)
-- [Git](https://git-scm.com/)
-- Windows 10/11 (required for `safeStorage` DPAPI encryption)
 
-### Installation
+### Install & Run
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/NexusDesk.git
 cd NexusDesk
 npm install
-npm run desktop
+npm start
 ```
 
-### API Keys Required (set in the Vault after launching)
-
-| Key | Required | Get it at |
-|---|---|---|
-| **Google Gemini API** | ✅ Yes | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| **Binance API** | For trading | [binance.com/en/my/settings/api-management](https://www.binance.com/en/my/settings/api-management) |
-| **CoinMarketCap API** | For market data | [coinmarketcap.com/api](https://coinmarketcap.com/api/) |
-| **LunarCrush API** | For social data | [lunarcrush.com](https://lunarcrush.com/) |
-| **Other exchanges** | Optional | Via CCXT (MEXC, KuCoin, etc.) |
-
-> All keys are entered in the **Command Center Vault** (⚙️ icon) after launch — never in `.env` files.
+Or just double-click `start.bat` — it installs dependencies on first run automatically.
 
 ---
 
-## 🏗️ Architecture
+## Setup: API Keys (enter in the Vault after launch)
+
+| Key | Purpose | Where to get it |
+|---|---|---|
+| **Google Gemini API** | Powers the AI Co-Pilot | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — Free |
+| **CoinMarketCap API** | Market cap, volume, top movers, supply data | [coinmarketcap.com/api](https://coinmarketcap.com/api/) — Free tier |
+| **LunarCrush API** | Social sentiment, Galaxy Score, AltRank | [lunarcrush.com](https://lunarcrush.com/) — Free tier |
+| **Binance API** | Live balance + optional trade execution | Binance → Account → API Management |
+| **Other exchanges** | Any CCXT-supported exchange | Add in Vault |
+
+> All keys are entered inside the app (**Vault** icon). Never use `.env` files — they are not needed and not supported.
+
+---
+
+## Project Structure
 
 ```
 NexusDesk/
 ├── electron/
-│   ├── main.cjs          # Main process: IPC handlers, security, trade engine
-│   ├── market-intel.cjs  # Market intelligence: F&G, CMC, LunarCrush (cached)
-│   ├── ai-chat.html      # AI Co-Pilot panel with Market Pulse strip
-│   ├── portfolio.html    # Command Center Vault (API key management)
-│   ├── arbitrage.html    # Cross-exchange arbitrage scanner
-│   ├── control.html      # Main control bar
-│   ├── preload.cjs       # Electron preload script
-│   └── splitter.html     # Layout splitter handle
+│   ├── main.cjs            Main process — IPC, security, trade engine
+│   ├── market-intel.cjs    Market data — F&G, CMC, LunarCrush (15-min cache)
+│   ├── ai-chat.html        AI Co-Pilot panel with Market Pulse strip
+│   ├── portfolio.html      Command Center Vault
+│   ├── arbitrage.html      Cross-exchange arbitrage scanner
+│   ├── control.html        Top control bar
+│   ├── preload.cjs         Electron preload
+│   └── splitter.html       Layout drag handle
+├── docs/
+│   └── dashboard.png       Dashboard screenshot
+├── .gitignore
+├── LICENSE
+├── README.md
 ├── package.json
-├── start.bat             # Windows quick-launch script
-└── .gitignore
+└── start.bat
 ```
 
 ---
 
-## 🤖 AI Co-Pilot Capabilities
+## Example AI Prompts
 
-The AI knows — **in real time** — about:
-- Your live portfolio balance across all connected exchanges
-- Fear & Greed Index with interpretation
-- Altcoin Season Index (calculated from CMC top 50 data)
-- Total crypto market cap + BTC/ETH dominance
-- Top 10 gainers and losers from CMC top 100
-- Specific coin data on demand (market cap, supply, FDV, volume, LunarCrush social score)
-
-Example prompts:
-- *"What are the top gainers today and should I trade any of them?"*
-- *"Is this a good time to buy or should I wait? Use the F&G and altcoin season data."*
-- *"Analyze SOL — give me market data and social sentiment."*
-- *"Calculate the arbitrage opportunity for ETH/USDT across my exchanges."*
-
----
-
-## ⚠️ Disclaimer
-
-This is a personal trading tool, not financial advice. Crypto trading carries significant risk. Always do your own research. The developers are not responsible for any financial losses.
+```
+What is the Fear and Greed Index right now and what does it mean?
+```
+```
+Is this Bitcoin season or Altcoin season? Where should I focus?
+```
+```
+What are the top gainers today? Which ones look worth trading?
+```
+```
+Analyze SOL — give me market cap, volume, supply, and social sentiment.
+```
+```
+Based on current market conditions, which 3 coins would you pick today and why?
+```
 
 ---
 
-## 📄 License
+## Disclaimer
 
-MIT License — see [LICENSE](LICENSE) for details.
+NexusDesk is a personal tool, not financial advice. Crypto trading carries significant risk. The developers are not responsible for any losses. Always do your own research.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
