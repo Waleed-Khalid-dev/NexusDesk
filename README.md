@@ -26,6 +26,14 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ---
 
+## 🛠️ Tech Stack
+- **Frontend:** HTML5, Vanilla CSS (Glassmorphism UI), JavaScript
+- **Backend/Desktop:** Electron, Node.js
+- **Integrations:** CCXT (Crypto APIs), Google Gemini AI, CoinMarketCap, LunarCrush
+- **Security:** Windows DPAPI (`electron.safeStorage`)
+
+---
+
 ## Features
 
 - **AI Co-Pilot** — Ask anything. The AI already knows your balance, the Fear & Greed Index, top movers, BTC dominance, and market sentiment before you type a word.
