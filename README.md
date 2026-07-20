@@ -65,16 +65,37 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 - Windows 10 or 11
 - [Node.js 18+](https://nodejs.org/)
 
-### Install & Run
+### 1. Install & Run for Development
 
 ```bash
+# Clone the repository
 git clone https://github.com/Waleed-Khalid-dev/NexusDesk.git
+
+# Navigate to the folder
 cd NexusDesk
+
+# Install all dependencies
 npm install
+
+# Start the application
 npm start
 ```
 
-Or just double-click `start.bat` — it installs dependencies on first run automatically.
+*Alternatively, double-click `start.bat` — it installs dependencies on first run automatically.*
+
+### 2. Build a Standalone Windows .exe
+
+If you want to package the app into a standalone installer that you can share with others:
+
+```bash
+# 1. Install the Electron Builder package
+npm install electron-builder --save-dev
+
+# 2. Run the build command
+npm run build
+```
+
+Once finished, look inside the newly created `dist/` folder. You will find `NexusDesk Setup 1.0.0.exe` ready to use.
 
 ---
 
