@@ -77,8 +77,8 @@ cd NexusDesk
 # Install all dependencies
 npm install
 
-# Start the application
-npm start
+# Start the desktop application
+npm run desktop
 ```
 
 *Alternatively, double-click `start.bat` — it installs dependencies on first run automatically.*
