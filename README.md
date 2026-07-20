@@ -68,7 +68,7 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 ### Install & Run
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/NexusDesk.git
+git clone https://github.com/Waleed-Khalid-dev/NexusDesk.git
 cd NexusDesk
 npm install
 npm start
