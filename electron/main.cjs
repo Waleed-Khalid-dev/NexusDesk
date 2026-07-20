@@ -49,7 +49,7 @@ let leftCollapsed = false;
 let rightCollapsed = false;
 let cmcPanelOpen = false;
 let aiPanelOpen = false;
-const AI_WIDTH = 320;
+let aiWidth = 320;
 let cmcActiveTab = "market"; // "market" | "coin" | "community"
 let cmcHeight = 380;
 let leftPct = LEFT_PCT;
@@ -95,6 +95,7 @@ function loadSettings() {
     if (typeof data.exchange === "string" && data.exchange.trim())
       currentExchange = data.exchange.toUpperCase().replace(/[^A-Z0-9]/g, "") || "BINANCE";
     if (typeof data.executionMode === "boolean") executionMode = data.executionMode;
+    if (typeof data.aiWidth === "number") aiWidth = clamp(data.aiWidth, 260, 800);
     enforceCenterMin();
   } catch {
     /* first run */
@@ -114,6 +115,7 @@ function saveSettings() {
           ticker: currentTicker,
           exchange: currentExchange,
           executionMode,
+          aiWidth,
         },
         null,
         2
@@ -281,7 +283,7 @@ function layout() {
     }
   }
 
-  const aiW = aiPanelOpen ? AI_WIDTH : 0;
+  const aiW = aiPanelOpen ? aiWidth : 0;
   const leftSplitW = leftCollapsed ? 0 : SPLIT_W;
   const rightSplitW = rightCollapsed ? 0 : SPLIT_W;
   const usable = Math.max(0, width - leftSplitW - rightSplitW - aiW);
@@ -365,6 +367,7 @@ function statePayload() {
     leftPct,
     rightPct,
     cmcHeight,
+    aiWidth,
     quick: TOP_COINS,
   };
 }
@@ -578,6 +581,7 @@ ipcMain.on("start-resize", (_e, { side, screenX, screenY }) => {
     startLeft: leftPct,
     startRight: rightPct,
     startCmcHeight: cmcHeight,
+    startAiWidth: aiWidth,
   };
 });
 
@@ -596,6 +600,16 @@ ipcMain.on("resize-to", (_e, { screenX, screenY }) => {
     
     cmcHeight = newH;
     layout();
+    return;
+  }
+
+  if (drag.side === "ai-left") {
+    const dx = drag.startX - screenX;
+    let newW = drag.startAiWidth + dx;
+    newW = clamp(newW, 260, 800);
+    aiWidth = newW;
+    layout();
+    broadcastState();
     return;
   }
 
@@ -774,6 +788,21 @@ ipcMain.on("open-arbitrage", () => {
     },
   });
   win.loadFile(path.join(__dirname, "arbitrage.html"));
+});
+
+ipcMain.on("open-market-intel", () => {
+  const win = new BrowserWindow({
+    width: 960,
+    height: 720,
+    title: "Market Intelligence Dashboard",
+    backgroundColor: "#09090b",
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+  win.loadFile(path.join(__dirname, "market-intel-ui.html"));
 });
 
 ipcMain.handle("scan-arbitrage", async (_e, ticker) => {
@@ -1236,6 +1265,24 @@ ipcMain.handle("chat-with-ai", async (_e, prompt, selectedModel = "latest-free-a
       const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
       const pulse = await marketIntel.getMarketPulse(cmcKey);
       marketContext = marketIntel.buildAIContext(pulse);
+
+      // Dynamically fetch LunarCrush social data for currentTicker and any tickers mentioned in prompt
+      const promptTickers = new Set([currentTicker]);
+      const matches = prompt.match(/\b[A-Z]{2,6}\b/gi) || [];
+      matches.forEach(m => promptTickers.add(m.toUpperCase()));
+
+      for (const ticker of promptTickers) {
+        try {
+          const social = await marketIntel.fetchLunarCrushSocial(ticker);
+          if (social) {
+            marketContext += `\n\n=== LUNARCRUSH SOCIAL INTELLIGENCE FOR ${ticker} ===\n`;
+            marketContext += `Galaxy Score (0-100): ${social.galaxyScore || 'N/A'}\n`;
+            marketContext += `AltRank (vs BTC): ${social.altRank || 'N/A'}\n`;
+            marketContext += `Social Volume 24h: ${social.socialVolume24h || 'N/A'}\n`;
+            marketContext += `Bullish Sentiment (1-5): ${social.bullishSentiment || 'N/A'}\n`;
+          }
+        } catch (err) { /* ignore if not found */ }
+      }
     } catch (e) {
       console.warn("[AI] Market intelligence fetch failed:", e.message);
     }

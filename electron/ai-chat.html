@@ -172,7 +172,7 @@
 
       /* ─── Input Area ────────────────────────────────────────────── */
       .input-area {
-        padding: 10px 14px; /* aligned with history padding */
+        padding: 10px 12px;
         background: var(--bg-surface);
         border-top: 1px solid var(--border);
         display: flex;
@@ -217,6 +217,18 @@
       }
       .input-area button:active { transform: scale(0.97); }
       .input-area button svg { width: 15px; height: 15px; }
+
+      /* ─── Resize Handle ──────────────────────────────────────────── */
+      .resize-handle {
+        position: absolute;
+        top: 0; left: 0; bottom: 0; width: 6px;
+        cursor: ew-resize;
+        z-index: 999;
+        transition: 0.2s;
+      }
+      .resize-handle:hover {
+        background: linear-gradient(90deg, var(--accent-sky-glow), transparent);
+      }
 
       /* ─── Trade Proposal Card ───────────────────────────────────── */
       .trade-proposal-card {
@@ -336,9 +348,28 @@
       }
       .pulse-refresh:hover { border-color: var(--accent-sky); color: var(--accent-sky); }
       .pulse-loading { color: var(--text-lo); font-size: 10px; padding: 0 4px; }
+      
+      .btn-expand-pulse {
+        margin-left: 6px;
+        background: linear-gradient(135deg, hsla(200, 90%, 60%, 0.15), transparent);
+        border: 1px solid var(--accent-sky-glow);
+        color: var(--accent-sky);
+        border-radius: 5px;
+        padding: 2px 7px;
+        font-size: 9px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        flex-shrink: 0;
+      }
+      .btn-expand-pulse:hover {
+        background: var(--accent-sky);
+        color: #fff;
+      }
     </style>
   </head>
   <body>
+    <div class="resize-handle" id="aiResizeHandle"></div>
     <div class="header">
       <div class="header-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 7.1"/><path d="M12 12l9.9 4.9"/></svg>
@@ -428,10 +459,14 @@
 
         const ts = pulse.fetchedAt ? new Date(pulse.fetchedAt).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }) : '';
         parts.push(`<button class="pulse-refresh" id="pulseRefreshBtn" title="Refresh market data">↻ ${ts}</button>`);
+        parts.push(`<button class="btn-expand-pulse" id="btnExpandPulse" title="Open Market Intelligence Dashboard">↗ Expand</button>`);
 
         pulseStrip.innerHTML = parts.join('');
 
         document.getElementById('pulseRefreshBtn')?.addEventListener('click', () => loadMarketPulse(true));
+        document.getElementById('btnExpandPulse')?.addEventListener('click', () => {
+          ipcRenderer.send('open-market-intel');
+        });
       }
 
       async function loadMarketPulse(force = false) {
@@ -577,6 +612,29 @@
 
       sendBtn.onclick = sendPrompt;
       promptInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendPrompt(); });
+
+      // ── AI Resize Handle ────────────────────────────────────────────────────
+      const aiResizeHandle = document.getElementById("aiResizeHandle");
+      let isResizing = false;
+
+      aiResizeHandle.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        document.body.style.userSelect = "none";
+        ipcRenderer.send("start-resize", { side: "ai-left", screenX: e.screenX, screenY: e.screenY });
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        ipcRenderer.send("resize-to", { screenX: e.screenX, screenY: e.screenY });
+      });
+
+      window.addEventListener("mouseup", () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.userSelect = "";
+          ipcRenderer.send("end-resize");
+        }
+      });
     </script>
   </body>
 </html>

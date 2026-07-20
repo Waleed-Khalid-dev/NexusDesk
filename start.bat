@@ -19,4 +19,4 @@ IF NOT EXIST node_modules (
 )
 
 echo  [*] Launching NexusDesk...
-npm run start
+npm run desktop
