@@ -222,6 +222,36 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Detail View */
+    #detailView { display: none; }
+    .btn-back {
+      background: transparent; border: none; color: var(--text-mid);
+      font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
+      margin-bottom: 20px; transition: color 0.2s; font-family: 'Inter', sans-serif; padding: 0;
+    }
+    .btn-back:hover { color: var(--text-hi); }
+    
+    .coin-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .coin-header h2 { font-size: 32px; font-weight: 700; margin: 0; }
+    .coin-header .badge { background: var(--bg-raised); color: var(--text-mid); padding: 4px 8px; border-radius: 6px; font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+    
+    .detail-price-row { display: flex; align-items: baseline; gap: 16px; margin-bottom: 30px; }
+    .detail-price { font-size: 40px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .detail-change { font-size: 16px; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.05); }
+    
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 30px; }
+    .stat-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .stat-label { font-size: 12px; color: var(--text-lo); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+    .stat-val { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text-hi); }
+    .stat-sub { font-size: 12px; color: var(--text-mid); font-weight: 600; margin-left: 6px; display: inline-block; }
+    
+    .sentiment-section { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 30px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .sentiment-header { display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 600; font-size: 15px; }
+    .sentiment-bar-container { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg-raised); gap: 2px; }
+    .sentiment-bullish { background: var(--accent-green); transition: width 1s cubic-bezier(0.1, 0.7, 0.1, 1); }
+    .sentiment-bearish { background: var(--accent-red); transition: width 1s cubic-bezier(0.1, 0.7, 0.1, 1); }
+    .sentiment-labels { display: flex; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--text-mid); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -239,48 +269,95 @@
     <button class="btn-refresh" id="refreshBtn">Refresh Data</button>
   </div>
 
-  <div class="grid">
-    <!-- Fear & Greed -->
-    <div class="card fear-greed">
-      <div class="card-title">Market Psychology <span id="fgTime">--</span></div>
-      <div class="big-score">
-        <div class="score-value" id="fgValue">--</div>
-        <div class="score-label" id="fgLabel">Loading...</div>
+  <div id="dashboardView">
+    <div class="grid">
+      <!-- Fear & Greed -->
+      <div class="card fear-greed">
+        <div class="card-title">Market Psychology <span id="fgTime">--</span></div>
+        <div class="big-score">
+          <div class="score-value" id="fgValue">--</div>
+          <div class="score-label" id="fgLabel">Loading...</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="fgBar" style="width: 0%; background: var(--text-lo);"></div>
+        </div>
+        <div class="desc" id="fgDesc">The Fear & Greed index analyzes volatility, market momentum, volume, and social media sentiment.</div>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill" id="fgBar" style="width: 0%; background: var(--text-lo);"></div>
+
+      <!-- Altcoin Season -->
+      <div class="card alt-season">
+        <div class="card-title">Seasonality Index <span id="altTime">--</span></div>
+        <div class="big-score">
+          <div class="score-value" id="altValue">--</div>
+          <div class="score-label" id="altLabel">Loading...</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="altBar" style="width: 0%; background: var(--accent-sky);"></div>
+        </div>
+        <div class="desc" id="altDesc">If 75% of the Top 50 coins performed better than Bitcoin over the last season (90 days), it is Altcoin Season.</div>
       </div>
-      <div class="desc" id="fgDesc">The Fear & Greed index analyzes volatility, market momentum, volume, and social media sentiment.</div>
     </div>
 
-    <!-- Altcoin Season -->
-    <div class="card alt-season">
-      <div class="card-title">Seasonality Index <span id="altTime">--</span></div>
-      <div class="big-score">
-        <div class="score-value" id="altValue">--</div>
-        <div class="score-label" id="altLabel">Loading...</div>
+    <div class="grid">
+      <!-- Top Gainers -->
+      <div class="card gainers">
+        <div class="card-title">Top Gainers (24h)</div>
+        <div id="gainersList">
+          <div class="desc">Loading gainers...</div>
+        </div>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill" id="altBar" style="width: 0%; background: var(--accent-sky);"></div>
+
+      <!-- Top Losers -->
+      <div class="card losers">
+        <div class="card-title">Top Losers (24h)</div>
+        <div id="losersList">
+          <div class="desc">Loading losers...</div>
+        </div>
       </div>
-      <div class="desc" id="altDesc">If 75% of the Top 50 coins performed better than Bitcoin over the last season (90 days), it is Altcoin Season.</div>
     </div>
   </div>
 
-  <div class="grid">
-    <!-- Top Gainers -->
-    <div class="card gainers">
-      <div class="card-title">Top Gainers (24h)</div>
-      <div id="gainersList">
-        <div class="desc">Loading gainers...</div>
-      </div>
+  <div id="detailView">
+    <button class="btn-back" id="btnBackToDashboard">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to Dashboard
+    </button>
+
+    <div class="coin-header">
+      <h2 id="detailName">--</h2>
+      <span class="badge" id="detailSymbol">--</span>
+      <span class="badge" id="detailRank">#--</span>
     </div>
 
-    <!-- Top Losers -->
-    <div class="card losers">
-      <div class="card-title">Top Losers (24h)</div>
-      <div id="losersList">
-        <div class="desc">Loading losers...</div>
+    <div class="detail-price-row">
+      <div class="detail-price" id="detailPrice">$0.00</div>
+      <div class="detail-change" id="detailChange">0.00%</div>
+    </div>
+    
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Market Cap</div><div class="stat-val" id="detailMcap">--</div></div>
+      <div class="stat-box"><div class="stat-label">Unlocked Mkt Cap</div><div class="stat-val" id="detailCircMcap">--</div></div>
+      <div class="stat-box"><div class="stat-label">FDV</div><div class="stat-val" id="detailFdv">--</div></div>
+      <div class="stat-box"><div class="stat-label">Volume (24h)</div><div class="stat-val" id="detailVol">--<span class="stat-sub" id="detailVolPct"></span></div></div>
+      <div class="stat-box"><div class="stat-label">Vol / MktCap</div><div class="stat-val" id="detailVolMcap">--</div></div>
+      <div class="stat-box"><div class="stat-label">Profile Score</div><div class="stat-val" id="detailProfileScore">--</div></div>
+      <div class="stat-box"><div class="stat-label">Circulating Supply</div><div class="stat-val" id="detailCirc">--</div></div>
+      <div class="stat-box"><div class="stat-label">Total Supply</div><div class="stat-val" id="detailTotal">--</div></div>
+      <div class="stat-box"><div class="stat-label">Max Supply</div><div class="stat-val" id="detailMax">--</div></div>
+    </div>
+
+    <div class="sentiment-section">
+      <div class="sentiment-header">
+        <span style="color:var(--accent-green)" id="sentBullTxt">--% Bullish</span>
+        <span style="color:var(--accent-red)" id="sentBearTxt">--% Bearish</span>
+      </div>
+      <div class="sentiment-bar-container">
+        <div class="sentiment-bullish" id="sentBullBar" style="width:50%"></div>
+        <div class="sentiment-bearish" id="sentBearBar" style="width:50%"></div>
+      </div>
+      <div class="sentiment-labels">
+        <span>Community Sentiment (LunarCrush)</span>
+        <span id="galaxyScoreTxt">Galaxy Score: --/100</span>
       </div>
     </div>
   </div>
@@ -296,6 +373,14 @@
       return "var(--accent-green)";
     }
 
+    function formatCurrency(n) {
+      if (!n && n !== 0) return "--";
+      if (n >= 1e12) return "$" + (n / 1e12).toFixed(2) + "T";
+      if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
+      if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+      return "$" + n.toLocaleString();
+    }
+
     function renderCoinList(container, coins, isGainer) {
       if (!coins || coins.length === 0) {
         container.innerHTML = `<div class="desc">No data available.</div>`;
@@ -305,7 +390,7 @@
       const sign = isGainer ? '+' : '';
       
       container.innerHTML = coins.slice(0, 8).map((c, i) => `
-        <div class="list-row">
+        <div class="list-row coin-row" data-symbol="${c.symbol}" style="cursor:pointer;">
           <div class="coin-info">
             <span class="coin-rank">${i+1}</span>
             <span class="coin-symbol">${c.symbol}</span>
@@ -316,6 +401,90 @@
           </div>
         </div>
       `).join('');
+
+      // Dynamically attach listeners to avoid Electron CSP blocking inline onclicks
+      const rows = container.querySelectorAll('.coin-row');
+      rows.forEach(row => {
+        row.addEventListener('click', () => {
+          openCoinDetails(row.getAttribute('data-symbol'));
+        });
+      });
+    }
+
+    function closeCoinDetails() {
+      document.getElementById('detailView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'block';
+    }
+
+    async function openCoinDetails(symbol) {
+      document.getElementById('loader').style.opacity = '1';
+      document.getElementById('loader').style.pointerEvents = 'all';
+
+      try {
+        const res = await ipcRenderer.invoke('get-coin-intelligence', symbol);
+        if (res.success && res.coin) {
+          const c = res.coin;
+          const s = res.social; // Might be null
+
+          document.getElementById('detailName').innerText = c.name || symbol;
+          document.getElementById('detailSymbol').innerText = c.symbol;
+          document.getElementById('detailRank').innerText = "Rank #" + (c.cmcRank || "--");
+          
+          document.getElementById('detailPrice').innerText = "$" + (c.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6});
+          
+          const changeEl = document.getElementById('detailChange');
+          const changeVal = c.change24h || 0;
+          changeEl.innerText = (changeVal > 0 ? "+" : "") + changeVal.toFixed(2) + "% (24h)";
+          changeEl.style.color = changeVal >= 0 ? "var(--accent-green)" : "var(--accent-red)";
+
+          document.getElementById('detailMcap').innerText = formatCurrency(c.marketCap);
+          
+          // Unlocked / Circulating Mkt Cap = circulatingSupply * price
+          const circMcap = (c.circulatingSupply && c.price) ? c.circulatingSupply * c.price : 0;
+          document.getElementById('detailCircMcap').innerText = formatCurrency(circMcap);
+          
+          document.getElementById('detailFdv').innerText = formatCurrency(c.fullyDilutedMarketCap);
+          
+          document.getElementById('detailVol').innerText = formatCurrency(c.volume24h);
+          document.getElementById('detailVolMcap').innerText = c.volumeToMarketCap ? (c.volumeToMarketCap * 100).toFixed(2) + "%" : "--";
+          
+          document.getElementById('detailCirc').innerText = c.circulatingSupply ? formatCurrency(c.circulatingSupply).replace("$", "") + " " + c.symbol : "--";
+          document.getElementById('detailTotal').innerText = c.totalSupply ? formatCurrency(c.totalSupply).replace("$", "") + " " + c.symbol : "--";
+          document.getElementById('detailMax').innerText = c.maxSupply ? formatCurrency(c.maxSupply).replace("$", "") + " " + c.symbol : "--";
+          
+          // LunarCrush Social Data
+          if (s && s.bullishSentiment) {
+            const bull = Math.min(Math.round((s.bullishSentiment / 5) * 100), 100);
+            const bear = 100 - bull;
+            document.getElementById('sentBullTxt').innerText = bull + "% Bullish";
+            document.getElementById('sentBearTxt').innerText = bear + "% Bearish";
+            document.getElementById('sentBullBar').style.width = bull + "%";
+            document.getElementById('sentBearBar').style.width = bear + "%";
+            document.getElementById('galaxyScoreTxt').innerText = "Galaxy Score: " + (s.galaxyScore || "--") + "/100";
+            document.getElementById('detailProfileScore').innerText = (s.galaxyScore || "--") + "/100";
+          } else {
+            document.getElementById('sentBullTxt').innerText = "--% Bullish";
+            document.getElementById('sentBearTxt').innerText = "--% Bearish";
+            document.getElementById('sentBullBar').style.width = "50%";
+            document.getElementById('sentBearBar').style.width = "50%";
+            document.getElementById('galaxyScoreTxt').innerText = "Galaxy Score: --/100";
+            document.getElementById('detailProfileScore').innerText = "--";
+          }
+
+          document.getElementById('dashboardView').style.display = 'none';
+          document.getElementById('detailView').style.display = 'block';
+        } else {
+          alert("Could not fetch details: " + (res.error || "Unknown error"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load coin details.");
+      } finally {
+        setTimeout(() => {
+          document.getElementById('loader').style.opacity = '0';
+          document.getElementById('loader').style.pointerEvents = 'none';
+        }, 300);
+      }
     }
 
     async function fetchData() {
@@ -368,6 +537,7 @@
     }
 
     document.getElementById('refreshBtn').addEventListener('click', fetchData);
+    document.getElementById('btnBackToDashboard').addEventListener('click', closeCoinDetails);
     
     // Initial fetch
     fetchData();
