@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "ccxt": "^4.5.67"
+    "ccxt": "^4.5.67",
+    "sql.js": "^1.14.1"
   },
   "devDependencies": {
     "electron": "^37.10.3"
