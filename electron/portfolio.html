@@ -332,6 +332,18 @@
         <div style="border-top: 1px solid var(--border); margin: 18px 0 14px;"></div>
 
         <div class="form-group">
+          <label>CryptoCompare API Key &nbsp;·&nbsp; <span style="color: var(--text-lo); font-weight:400; text-transform:none; letter-spacing:0;">Free at cryptocompare.com</span></label>
+          <input type="password" id="cryptoCompareKey" placeholder="Enter CryptoCompare API Key" />
+          <p style="font-size: 10px; color: var(--text-lo); margin-top: 6px;">Enables: Live global and coin-specific news feeds on the dashboard.</p>
+        </div>
+        <div style="margin-top: 14px;">
+          <button class="btn" style="background: linear-gradient(180deg, hsl(200,80%,50%), hsl(200,90%,40%)); box-shadow: 0 2px 10px hsla(200,90%,60%,0.2);" id="saveCryptoCompareBtn">Save CryptoCompare Key</button>
+        </div>
+        <div id="cryptoCompareStatus" class="status-msg"></div>
+
+        <div style="border-top: 1px solid var(--border); margin: 18px 0 14px;"></div>
+
+        <div class="form-group">
           <label>LunarCrush API Key &nbsp;·&nbsp; <span style="color: var(--text-lo); font-weight:400; text-transform:none; letter-spacing:0;">Optional — lunarcrush.com</span></label>
           <input type="password" id="lunarKey" placeholder="Enter LunarCrush API Key (optional)" />
           <p style="font-size: 10px; color: var(--text-lo); margin-top: 6px;">Enables: Social sentiment scores, Galaxy Score, AltRank, social volume per coin. Enhances AI trade reasoning.</p>
@@ -530,6 +542,27 @@
         }
       };
 
+      function showCryptoCompareStatus(msg, isErr) {
+        const el = document.getElementById('cryptoCompareStatus');
+        el.textContent = msg;
+        el.className = 'status-msg ' + (isErr ? 'status-err' : 'status-ok');
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 4000);
+      }
+
+      document.getElementById('saveCryptoCompareBtn').onclick = async () => {
+        const key = document.getElementById('cryptoCompareKey').value.trim();
+        if (!key) { showCryptoCompareStatus('Please enter a CryptoCompare API Key', true); return; }
+        const res = await ipcRenderer.invoke('save-cryptocompare-key', key);
+        if (res.success) {
+          showCryptoCompareStatus('CryptoCompare Key saved and encrypted.', false);
+          document.getElementById('cryptoCompareKey').value = '';
+          document.getElementById('cryptoCompareKey').placeholder = '•••••••••••••••• (Encrypted)';
+        } else {
+          showCryptoCompareStatus('Failed: ' + res.error, true);
+        }
+      };
+
       document.getElementById('saveLunarBtn').onclick = async () => {
         const key = document.getElementById('lunarKey').value.trim();
         if (!key) { showLunarStatus('Please enter a LunarCrush API Key', true); return; }
@@ -546,6 +579,9 @@
       // Pre-fill placeholder if CMC key already exists
       ipcRenderer.invoke('has-api-key', 'cmc').then(res => {
         if (res.hasKey) document.getElementById('cmcKey').placeholder = '•••••••••••••••• (Encrypted)';
+      });
+      ipcRenderer.invoke('has-api-key', 'cryptocompare').then(res => {
+        if (res.hasKey) document.getElementById('cryptoCompareKey').placeholder = '•••••••••••••••• (Encrypted)';
       });
       ipcRenderer.invoke('has-api-key', 'lunarcrush').then(res => {
         if (res.hasKey) document.getElementById('lunarKey').placeholder = '•••••••••••••••• (Encrypted)';

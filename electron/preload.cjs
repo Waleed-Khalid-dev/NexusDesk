@@ -23,4 +23,5 @@ contextBridge.exposeInMainWorld("hub", {
     ipcRenderer.on("symbol-changed", handler);
     return () => ipcRenderer.removeListener("symbol-changed", handler);
   },
+  openMarketIntel: () => ipcRenderer.send("open-market-intel"),
 });

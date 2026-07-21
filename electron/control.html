@@ -383,6 +383,9 @@
           <button class="icon-btn sky" id="toggleAi" title="Toggle AI Co-Pilot">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
           </button>
+          <button class="icon-btn" id="openMarketIntel" title="Open Market Intelligence Dashboard" style="color: #a855f7;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          </button>
           <button class="icon-btn" id="openArbitrage" title="Open Arbitrage Scanner" style="color: #fb923c;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4l3 3-3 3"/><path d="M21 7H9"/><path d="M6 20l-3-3 3-3"/><path d="M3 17h12"/></svg>
           </button>
@@ -496,6 +499,7 @@
       document.getElementById("reloadChart").onclick = () => window.hub.reloadPane("chart");
       document.getElementById("reloadHeat").onclick = () => window.hub.reloadPane("heatmap");
       document.getElementById("openArbitrage").onclick = () => window.hub.openArbitrage();
+      document.getElementById("openMarketIntel").onclick = () => window.hub.openMarketIntel();
 
       // CMC Panel
       cmcToggleBtn.onclick = () => window.hub.cmcToggle();
