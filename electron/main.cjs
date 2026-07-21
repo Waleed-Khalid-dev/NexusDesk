@@ -11,6 +11,7 @@ const {
   ipcMain,
   screen,
   safeStorage,
+  Notification
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -514,6 +515,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  startFundingAlertWatcher();
   app.on("activate", () => {
     if (BaseWindow.getAllWindows().length === 0) createWindow();
   });
@@ -1024,6 +1026,18 @@ ipcMain.handle("save-cmc-key", (_e, apiKey) => {
   }
 });
 
+ipcMain.handle("save-cryptocompare-key", (_e, apiKey) => {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return { success: false, error: "OS Encryption not available" };
+    const keys = loadKeys();
+    keys["cryptocompare"] = { key: safeStorage.encryptString(apiKey).toString("base64") };
+    saveKeys(keys);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle("save-lunarcrush-key", (_e, apiKey) => {
   try {
     if (!safeStorage.isEncryptionAvailable()) return { success: false, error: "OS Encryption not available" };
@@ -1048,16 +1062,57 @@ ipcMain.handle("get-market-pulse", async () => {
   }
 });
 
-ipcMain.handle("get-coin-intelligence", async (_e, symbol) => {
+ipcMain.handle("get-coin-intelligence", async (_e, symbol, exchangeId = 'binance') => {
   try {
     const keys = loadKeys();
     const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
     if (!cmcKey) return { success: false, error: "No CoinMarketCap API key found in Vault." };
-    const [coinData, socialData] = await Promise.all([
+    const [coinData, socialData, derivatives] = await Promise.all([
       marketIntel.fetchCMCCoin(symbol, cmcKey),
       marketIntel.fetchLunarCrushSocial(symbol),
+      marketIntel.getSpecificCoinDerivatives(symbol, exchangeId),
     ]);
-    return { success: true, coin: coinData, social: socialData };
+    return { success: true, coin: coinData, social: socialData, derivatives: derivatives };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("get-market-extras", async () => {
+  try {
+    const keys = loadKeys();
+    const ccKey = keys["cryptocompare"] ? safeStorage.decryptString(Buffer.from(keys["cryptocompare"].key, "base64")) : null;
+    const extras = await marketIntel.getMarketExtras(ccKey);
+    return { success: true, extras };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("get-funding-rates", async (_e, exchangeId) => {
+  try {
+    const rates = await marketIntel.getFundingRatesData(exchangeId);
+    return { success: true, rates };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("get-open-interest", async (_e, exchangeId) => {
+  try {
+    const oiData = await marketIntel.getOpenInterestData(exchangeId);
+    return { success: true, oiData };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("get-coin-news", async (_e, symbol) => {
+  try {
+    const keys = loadKeys();
+    const ccKey = keys["cryptocompare"] ? safeStorage.decryptString(Buffer.from(keys["cryptocompare"].key, "base64")) : null;
+    const news = await marketIntel.fetchCryptoNews(symbol, ccKey);
+    return { success: true, news };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -1357,4 +1412,41 @@ ipcMain.handle('get-public-ip', async () => {
     return { success: false, error: e.message };
   }
 });
+
+// --- Background Alert Watcher ---
+let notifiedCoins = new Set();
+function startFundingAlertWatcher() {
+  // Check every 15 minutes (900,000 ms)
+  setInterval(async () => {
+    try {
+      // Monitor Binance by default
+      const rates = await marketIntel.getFundingRatesData('binance');
+      if (!rates) return;
+
+      rates.forEach(r => {
+        // Threshold +/- 0.5%
+        if (Math.abs(r.rate) >= 0.5) {
+          const coinKey = `${r.symbol}_${r.rate}`; // simple deduplication
+          if (!notifiedCoins.has(coinKey)) {
+            notifiedCoins.add(coinKey);
+            const isShortSqueeze = r.rate < 0;
+            const title = isShortSqueeze ? `⚠️ Extreme Short-Squeeze Warning: ${r.symbol}` : `⚠️ Extreme Long-Squeeze Warning: ${r.symbol}`;
+            const body = `Funding rate hit ${r.rate.toFixed(4)}% on Binance. High risk of a violent squeeze!`;
+            
+            if (Notification.isSupported()) {
+              new Notification({ title, body, icon: path.join(__dirname, 'icon.png') }).show();
+            }
+          }
+        }
+      });
+      
+      // Cleanup old notifications from memory
+      if (notifiedCoins.size > 100) {
+        notifiedCoins.clear();
+      }
+    } catch (e) {
+      console.error("Alert watcher error:", e);
+    }
+  }, 15 * 60 * 1000);
+}
 

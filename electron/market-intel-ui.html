@@ -315,6 +315,81 @@
         </div>
       </div>
     </div>
+
+    <div class="grid">
+      
+      <!-- Extreme Squeeze Radar -->
+      <div class="card" style="grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.03);">
+        <div class="card-title" style="color: var(--accent-red); font-weight: 700; display:flex; align-items:center; gap:8px;">
+          ⚠️ Extreme Squeeze Radar (≥ ±0.5%)
+        </div>
+        <div id="squeezeRadarList" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:8px;">
+          <div class="desc" style="color:var(--text-lo);">Scanning for extreme sentiment...</div>
+        </div>
+      </div>
+
+      <!-- Funding Rates -->
+      <div class="card">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Live Funding Rates (Derivatives)</span>
+          <select id="fundingExchangeSelector" style="background:var(--bg-deep); border:1px solid var(--border); color:white; padding:4px 8px; border-radius:4px; font-size:12px; outline:none; cursor:pointer;">
+            <option value="binance">Binance</option>
+            <option value="bybit">Bybit</option>
+            <option value="mexc">MEXC</option>
+            <option value="okx">OKX</option>
+          </select>
+        </div>
+        <div style="font-size: 11px; color: var(--text-lo); margin-top: -12px; margin-bottom: 12px; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border-left: 2px solid var(--accent-amber);">
+          Pulled live from <b id="fundingExchangeName">Binance Futures</b>. Funding rates tell us what leverage traders are doing.<br/>
+          <span style="color: var(--accent-red)">Negative:</span> Crowd is shorting (Risk of a short-squeeze up).<br/>
+          <span style="color: var(--accent-green)">Positive:</span> Crowd is long (Risk of a long-squeeze dump).
+        </div>
+        <div id="fundingList">
+          <div class="desc">Loading funding rates...</div>
+        </div>
+      </div>
+
+      <!-- Open Interest Tracker -->
+      <div class="card">
+        <div class="card-title">Open Interest Tracker</div>
+        <div style="font-size: 11px; color: var(--text-lo); margin-top: -12px; margin-bottom: 12px; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border-left: 2px solid var(--accent-sky);">
+          Open Interest (OI) shows <b>how much money</b> is betting. <br/>
+          High OI + High Negative Funding = <b>Explosive Short Squeeze</b>.<br/>
+          OI is derived from the extreme coins on the left.
+        </div>
+        <div id="openInterestList">
+          <div class="desc">Loading open interest...</div>
+        </div>
+      </div>
+
+      <!-- Watchlist -->
+      <div class="card">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Custom Watchlist</span>
+          <div style="display:flex; gap: 6px;">
+            <select id="watchExchangeSelect" style="background:var(--bg-deep); border:1px solid var(--border); color:white; padding:4px; border-radius:4px; font-size:12px; outline:none; width: 75px;">
+              <option value="binance">Binance</option>
+              <option value="bybit">Bybit</option>
+              <option value="mexc">MEXC</option>
+              <option value="okx">OKX</option>
+            </select>
+            <input type="text" id="watchInput" placeholder="SUI" style="background:var(--bg-deep); border:1px solid var(--border); color:white; padding:4px 8px; border-radius:4px; font-size:12px; outline:none; text-transform:uppercase; width: 60px;" />
+            <button id="btnAddWatch" style="background:var(--accent-sky); border:none; color:white; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px; padding:0 8px;">Add</button>
+          </div>
+        </div>
+        <div id="watchlistContainer">
+          <div class="desc">No coins in watchlist.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- News Feed -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-title">Top Crypto Headlines</div>
+      <div id="newsList" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="desc">Loading news...</div>
+      </div>
+    </div>
   </div>
 
   <div id="detailView">
@@ -360,6 +435,15 @@
         <span id="galaxyScoreTxt">Galaxy Score: --/100</span>
       </div>
     </div>
+
+    <div class="sentiment-section" style="margin-bottom: 30px;">
+      <div class="sentiment-header">
+        <span>Coin News</span>
+      </div>
+      <div id="detailNewsList" style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+        <div class="desc">Loading news...</div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -380,6 +464,255 @@
       if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
       return "$" + n.toLocaleString();
     }
+
+    let rawWatchlist = JSON.parse(localStorage.getItem('market_intel_watchlist') || '[]');
+    let watchlist = rawWatchlist.map(item => {
+      if (typeof item === 'string') {
+        return { symbol: item, exchange: 'binance' }; // Upgrade old string arrays
+      }
+      return item;
+    });
+
+    function renderNews(container, articles) {
+      if (!articles || articles.length === 0) {
+        container.innerHTML = `<div class="desc">No news found.</div>`;
+        return;
+      }
+      container.innerHTML = articles.map(a => `
+        <div style="display:flex; gap:12px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+          ${a.image ? `<img src="${a.image}" style="width:60px; height:60px; border-radius:8px; object-fit:cover;" />` : ''}
+          <div style="flex:1;">
+            <a href="${a.url}" target="_blank" style="color:var(--text-hi); font-weight:600; text-decoration:none; font-size:14px; display:block; margin-bottom:4px;">${a.title}</a>
+            <div style="color:var(--text-mid); font-size:12px; line-height:1.4;">${a.body}</div>
+            <div style="color:var(--accent-sky); font-size:11px; margin-top:6px; font-weight:600;">${a.source || 'CryptoNews'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    let currentFundingRates = [];
+    let currentFundingLimit = 10;
+
+    function renderFundingRates(rates, resetLimit = true) {
+      if (resetLimit) {
+        currentFundingRates = rates;
+        currentFundingLimit = 10;
+      }
+      
+      const container = document.getElementById('fundingList');
+      if (!currentFundingRates || currentFundingRates.length === 0) {
+        container.innerHTML = `<div class="desc">No funding data available.</div>`;
+        return;
+      }
+      
+      const visibleRates = currentFundingRates.slice(0, currentFundingLimit);
+      
+      let html = visibleRates.map((r, i) => {
+        const isLongsPaying = r.rate > 0;
+        const color = isLongsPaying ? 'var(--accent-green)' : 'var(--accent-red)';
+        const sign = isLongsPaying ? '+' : '';
+        return `
+        <div class="list-row coin-row" data-symbol="${r.symbol}" style="cursor:pointer; align-items:center;">
+          <div class="coin-info">
+            <div class="coin-symbol" style="font-weight: 700;">${r.symbol}</div>
+            ${r.price ? `<div style="font-size: 11px; color: var(--text-lo); margin-top: 2px; font-weight: 600;">$${r.price < 0.01 ? r.price.toFixed(6) : r.price < 1 ? r.price.toFixed(4) : r.price.toFixed(2)}</div>` : ''}
+          </div>
+          <div class="coin-metrics">
+            <span class="coin-price" style="color:${color}">${sign}${r.rate.toFixed(4)}%</span>
+            <span class="coin-change" style="color:var(--text-lo); font-size:10px;">${isLongsPaying ? 'Longs pay Shorts' : 'Shorts pay Longs'}</span>
+          </div>
+        </div>
+        `;
+      }).join('');
+      
+      if (currentFundingRates.length > currentFundingLimit) {
+        html += `
+        <div style="text-align:center; padding: 10px 0;">
+          <button id="btnLoadMoreFunding" style="background:var(--surface-mid); color:var(--text-hi); border:none; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:600; cursor:pointer;">Load More</button>
+        </div>
+        `;
+      }
+      
+      container.innerHTML = html;
+      
+      const rows = container.querySelectorAll('.coin-row');
+      rows.forEach(row => {
+        row.addEventListener('click', () => openCoinDetails(row.getAttribute('data-symbol')));
+      });
+      
+      const btnLoadMore = document.getElementById('btnLoadMoreFunding');
+      if (btnLoadMore) {
+        btnLoadMore.addEventListener('click', () => {
+          currentFundingLimit += 10;
+          renderFundingRates(currentFundingRates, false);
+        });
+      }
+
+      // Render Extreme Squeeze Radar
+      const radarContainer = document.getElementById('squeezeRadarList');
+      if (radarContainer) {
+        const extremes = currentFundingRates.filter(r => Math.abs(r.rate) >= 0.5);
+        if (extremes.length === 0) {
+          radarContainer.innerHTML = '<div class="desc" style="color:var(--text-lo); padding: 8px;">No extreme sentiment detected right now.</div>';
+        } else {
+          radarContainer.innerHTML = extremes.map(r => {
+            const isShortSqueeze = r.rate < 0;
+            const color = isShortSqueeze ? 'var(--accent-red)' : 'var(--accent-green)';
+            return `
+            <div class="coin-row" data-symbol="${r.symbol}" style="min-width: 120px; padding: 8px; border-radius: 6px; background: rgba(${isShortSqueeze ? '239,68,68' : '34,197,94'}, 0.1); border: 1px solid ${color}; cursor:pointer; flex-shrink: 0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+              <div style="font-weight: 700; font-size: 13px;">${r.symbol}</div>
+              <div style="color: ${color}; font-size: 14px; font-weight: 800;">${r.rate > 0 ? '+' : ''}${r.rate.toFixed(4)}%</div>
+            </div>
+            `;
+          }).join('');
+          const radarRows = radarContainer.querySelectorAll('.coin-row');
+          radarRows.forEach(row => {
+            row.addEventListener('click', () => openCoinDetails(row.getAttribute('data-symbol')));
+          });
+        }
+      }
+    }
+
+    async function fetchOpenInterest(exchangeId) {
+      const listEl = document.getElementById('openInterestList');
+      if (!listEl) return;
+      
+      const names = { binance: "Binance Futures", bybit: "Bybit", mexc: "MEXC", okx: "OKX" };
+      listEl.innerHTML = '<div class="desc">Loading ' + names[exchangeId] + ' open interest...</div>';
+      try {
+        const res = await ipcRenderer.invoke('get-open-interest', exchangeId);
+        if (res.success) {
+          renderOpenInterest(res.oiData);
+        } else {
+          listEl.innerHTML = '<div class="desc">Failed to load OI: ' + res.error + '</div>';
+        }
+      } catch (e) {
+        listEl.innerHTML = '<div class="desc">Error fetching OI.</div>';
+      }
+    }
+
+    function renderOpenInterest(oiData) {
+      const container = document.getElementById('openInterestList');
+      if (!oiData || oiData.length === 0) {
+        container.innerHTML = `<div class="desc">No open interest data available.</div>`;
+        return;
+      }
+      
+      let html = oiData.map((r, i) => {
+        const isLongsPaying = r.rate > 0;
+        const color = isLongsPaying ? 'var(--accent-green)' : 'var(--accent-red)';
+        const oiFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(r.oi);
+        return `
+        <div class="list-row coin-row" data-symbol="${r.symbol}" style="cursor:pointer;">
+          <div class="coin-info">
+            <span class="coin-symbol">${r.symbol}</span>
+          </div>
+          <div class="coin-metrics" style="text-align: right;">
+            <span class="coin-price" style="color:var(--accent-sky); font-weight:700;">${r.oi > 0 ? oiFormatted : 'N/A'}</span>
+            <span class="coin-change" style="color:${color}; font-size:10px;">Funding: ${r.rate.toFixed(4)}%</span>
+          </div>
+        </div>
+        `;
+      }).join('');
+      
+      container.innerHTML = html;
+      const rows = container.querySelectorAll('.coin-row');
+      rows.forEach(row => {
+        row.addEventListener('click', () => openCoinDetails(row.getAttribute('data-symbol')));
+      });
+    }
+
+    async function loadWatchlist() {
+      const container = document.getElementById('watchlistContainer');
+      const exchangeNameMap = { binance: "Binance", bybit: "Bybit", mexc: "MEXC", okx: "OKX" };
+
+      if (watchlist.length === 0) {
+        container.innerHTML = `<div class="desc">No coins in watchlist. Type a symbol above to add.</div>`;
+        return;
+      }
+      container.innerHTML = `<div class="desc">Updating...</div>`;
+      
+      let html = '';
+      for (const item of watchlist) {
+        const sym = item.symbol;
+        const exchangeId = item.exchange || 'binance';
+        const exchangeName = exchangeNameMap[exchangeId] || exchangeId;
+
+        try {
+          const res = await ipcRenderer.invoke('get-coin-intelligence', sym, exchangeId);
+          if (res.success && res.coin) {
+            const c = res.coin;
+            const s = res.social;
+            const d = res.derivatives || {};
+            const price = c.price ? `$${c.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:6})}` : '--';
+            const change = c.change24h || 0;
+            const changeColor = change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            const sign = change > 0 ? '+' : '';
+            const galaxy = s ? `${s.galaxyScore}/100` : '--';
+            const bullish = s ? `${Math.round((s.bullishSentiment/5)*100)}%` : '--';
+            
+            // Format Derivatives
+            let fundingStr = 'N/A';
+            let fundingColor = 'var(--text-mid)';
+            if (d.fundingRate !== null && d.fundingRate !== undefined) {
+              fundingStr = `${d.fundingRate > 0 ? '+' : ''}${d.fundingRate.toFixed(4)}%`;
+              fundingColor = d.fundingRate > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+            const oiStr = (d.openInterest && d.openInterest > 0) ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(d.openInterest) : 'N/A';
+            
+            html += `
+              <div class="list-row coin-row" data-symbol="${sym}" style="cursor:pointer;">
+                <div class="coin-info" style="flex-direction:column; align-items:flex-start; gap:2px;">
+                  <span class="coin-symbol">${sym} <span title="Remove from Watchlist" style="color:var(--accent-red); font-size:12px; cursor:pointer; margin-left:6px; opacity:0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" onclick="event.stopPropagation(); removeWatchlist('${sym}')">✖</span></span>
+                  <span style="font-size:11px; color:var(--text-mid);">Galaxy: <span style="color:var(--text-hi); font-weight:600;">${galaxy}</span></span>
+                </div>
+                <div class="coin-metrics" style="text-align: right; flex-direction:column; gap:2px;">
+                  <div>
+                    <span class="coin-price" style="font-size: 14px;">${price}</span>
+                    <span class="coin-change" style="color:${changeColor}; font-size:12px;">${sign}${change.toFixed(2)}%</span>
+                  </div>
+                  <div style="font-size: 11px; margin-top: 4px;">
+                    <span style="color:var(--text-lo);">Funding (${exchangeName}):</span> <span style="color:${fundingColor}; font-weight:700;">${fundingStr}</span>
+                    <span style="color:var(--text-lo); margin-left: 6px;">OI:</span> <span style="color:var(--accent-sky); font-weight:700;">${oiStr}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          } else {
+            html += `<div class="list-row"><span class="coin-symbol" style="color:var(--text-lo)">${sym} (Error) <span style="cursor:pointer;" onclick="removeWatchlist('${sym}')">❌</span></span></div>`;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      container.innerHTML = html;
+      const rows = container.querySelectorAll('.coin-row');
+      rows.forEach(row => {
+        row.addEventListener('click', () => openCoinDetails(row.getAttribute('data-symbol')));
+      });
+    }
+
+    window.removeWatchlist = (sym) => {
+      watchlist = watchlist.filter(s => s.symbol !== sym);
+      localStorage.setItem('market_intel_watchlist', JSON.stringify(watchlist));
+      loadWatchlist();
+    };
+
+    document.getElementById('btnAddWatch').addEventListener('click', () => {
+      const input = document.getElementById('watchInput');
+      const val = input.value.trim().toUpperCase();
+      const ex = document.getElementById('watchExchangeSelect').value;
+      if (val && !watchlist.find(w => w.symbol === val)) {
+        watchlist.push({ symbol: val, exchange: ex });
+        localStorage.setItem('market_intel_watchlist', JSON.stringify(watchlist));
+        input.value = '';
+        loadWatchlist();
+      }
+    });
+
+    document.getElementById('watchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btnAddWatch').click();
+    });
 
     function renderCoinList(container, coins, isGainer) {
       if (!coins || coins.length === 0) {
@@ -471,6 +804,16 @@
             document.getElementById('detailProfileScore').innerText = "--";
           }
 
+          // Fetch Coin Specific News
+          document.getElementById('detailNewsList').innerHTML = `<div class="desc">Loading news...</div>`;
+          ipcRenderer.invoke('get-coin-news', symbol).then(newsRes => {
+            if (newsRes.success && newsRes.news) {
+              renderNews(document.getElementById('detailNewsList'), newsRes.news);
+            } else {
+              document.getElementById('detailNewsList').innerHTML = `<div class="desc">No recent news found.</div>`;
+            }
+          });
+
           document.getElementById('dashboardView').style.display = 'none';
           document.getElementById('detailView').style.display = 'block';
         } else {
@@ -526,6 +869,19 @@
             document.getElementById('altTime').innerText = timeStr;
           }
         }
+        
+        // Fetch Extras (News & Funding)
+        const extrasRes = await ipcRenderer.invoke('get-market-extras');
+        if (extrasRes.success) {
+          renderNews(document.getElementById('newsList'), extrasRes.extras.news);
+          // Initial funding load uses extras.funding (binance)
+          renderFundingRates(extrasRes.extras.funding);
+          fetchOpenInterest('binance');
+        }
+        
+        // Load Watchlist
+        loadWatchlist();
+        
       } catch (err) {
         console.error("Failed to fetch market pulse", err);
       } finally {
@@ -535,6 +891,29 @@
         }, 400);
       }
     }
+
+    // Exchange Switcher Logic
+    document.getElementById('fundingExchangeSelector').addEventListener('change', async (e) => {
+      const exchangeId = e.target.value;
+      const names = { binance: "Binance Futures", bybit: "Bybit Derivatives", mexc: "MEXC Futures", okx: "OKX Swaps" };
+      document.getElementById('fundingExchangeName').innerText = names[exchangeId] || "Exchange";
+      
+      const listEl = document.getElementById('fundingList');
+      listEl.innerHTML = '<div class="desc">Loading ' + names[exchangeId] + ' rates...</div>';
+      
+      try {
+        const res = await ipcRenderer.invoke('get-funding-rates', exchangeId);
+        if (res.success) {
+          renderFundingRates(res.rates);
+          fetchOpenInterest(exchangeId);
+          loadWatchlist();
+        } else {
+          listEl.innerHTML = `<div class="desc" style="color:var(--accent-red)">Failed to load rates.</div>`;
+        }
+      } catch (err) {
+        listEl.innerHTML = '<div class="desc">Error fetching funding rates.</div>';
+      }
+    });
 
     document.getElementById('refreshBtn').addEventListener('click', fetchData);
     document.getElementById('btnBackToDashboard').addEventListener('click', closeCoinDetails);

@@ -4,7 +4,7 @@
 
 **A premium desktop crypto trading command center.**
 
-AI Co-Pilot · Live Market Intelligence · Cross-Exchange Arbitrage · Encrypted Vault
+AI Co-Pilot · Live Market Intelligence · Cross-Exchange Arbitrage · Proactive Squeeze Radar
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-37-47848F?logo=electron)](https://www.electronjs.org/)
@@ -20,7 +20,7 @@ AI Co-Pilot · Live Market Intelligence · Cross-Exchange Arbitrage · Encrypted
 
 ## What is NexusDesk?
 
-NexusDesk is a desktop trading command center built with Electron. It gives you a unified workspace with live charts, an AI trading assistant, an arbitrage scanner, and a portfolio manager — all in one dark-mode, premium interface.
+NexusDesk is a desktop trading command center built with Electron. It gives you a unified workspace with live charts, an AI trading assistant, an arbitrage scanner, a proactive market intelligence dashboard, and a portfolio manager — all in one dark-mode, premium interface.
 
 The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin Season status, top gainers/losers, and full coin market data — automatically, on every message.
 
@@ -36,13 +36,15 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ## Features
 
+- **Proactive Market Intelligence** — A real-time dashboard displaying macro indicators alongside deep derivative metrics.
+- **Extreme Squeeze Radar** — Background observer tracking Live Funding Rates across exchanges. If any coin hits an extreme threshold (±0.5%), the app sends a desktop push notification and highlights it on the radar for potential short-squeezes.
+- **Open Interest (OI) Tracking** — Automatically fetches Binance Global OI for extreme sentiment coins, showing exactly how much capital is fueling a squeeze.
+- **Custom Pro-Watchlist** — Build a personalized watchlist that tracks Price, Social Galaxy Score, Funding Rates, and Open Interest. Uniquely supports **per-coin exchange selection** (e.g., track BTC from Binance and DEXE from MEXC in the same list).
 - **AI Co-Pilot** — Ask anything. The AI already knows your balance, the Fear & Greed Index, top movers, BTC dominance, and market sentiment before you type a word.
-- **Market Pulse Strip** — A live ticker at the top of the AI panel showing F&G, Altcoin Season Index, BTC dominance, and top 3 gainers/losers. Auto-refreshes every 15 minutes.
 - **Arbitrage Scanner** — Detect price spreads across all your connected exchanges for a single pair, Top 100 Gainers, or Top 100 Losers.
 - **Command Center Vault** — Manage all your API keys (Binance, Gemini AI, CMC, LunarCrush) in one place. All keys are encrypted using Windows DPAPI — never stored in plain text.
 - **Trade Safety System** — The AI can *propose* a trade. You must manually click **Confirm** in a modal for it to execute. No trade ever runs automatically.
 - **Live Portfolio** — Real-time balance from all connected exchanges (Spot + Futures merged).
-- **Position Limits** — A server-side max position size check (default $50) that the AI cannot bypass.
 
 ---
 
@@ -119,7 +121,8 @@ Once finished, look inside the newly created `dist/` folder. You will find `Nexu
 NexusDesk/
 ├── electron/
 │   ├── main.cjs            Main process — IPC, security, trade engine
-│   ├── market-intel.cjs    Market data — F&G, CMC, LunarCrush (15-min cache)
+│   ├── market-intel.cjs    Market data — Squeeze Radar, OI, CMC, LunarCrush
+│   ├── market-intel-ui.html Proactive Squeeze Radar & Custom Watchlist UI
 │   ├── ai-chat.html        AI Co-Pilot panel with Market Pulse strip
 │   ├── portfolio.html      Command Center Vault
 │   ├── arbitrage.html      Cross-exchange arbitrage scanner

@@ -15,8 +15,10 @@ const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const cache = {
   pulse: null,        // { data, ts }
   topMovers: null,    // { data, ts }
+  extras: null,       // { data, ts }
   coinCache: {},      // { [symbol]: { data, ts } }
   socialCache: {},    // { [symbol]: { data, ts } }
+  newsCache: {},      // { [symbol]: { data, ts } }
 };
 
 function isFresh(entry) {
@@ -227,6 +229,118 @@ function calculateAltcoinSeason(coins) {
   return { score, label, interpretation, btcChange7d: btcChange, altsOutperforming: outperformed };
 }
 
+// ─── Crypto News (CryptoCompare) ──────────────────────────────────────────────
+async function fetchCryptoNews(symbol = null, ccKey = null) {
+  if (!ccKey) {
+    console.error("[MarketIntel] CryptoCompare API key missing.");
+    return [];
+  }
+  const cacheKey = symbol ? symbol.toUpperCase() : "GLOBAL";
+  if (isFresh(cache.newsCache[cacheKey])) return cache.newsCache[cacheKey].data;
+  try {
+    const categories = symbol ? `&categories=${symbol.toUpperCase()}` : "";
+    const data = await httpGet(`https://min-api.cryptocompare.com/data/v2/news/?lang=EN${categories}`, {
+      authorization: `Apikey ${ccKey}`
+    });
+    if (data.Type < 100) throw new Error(data.Message || "Failed to fetch news");
+    const articles = data.Data || [];
+    const result = articles.slice(0, 10).map((a) => ({
+      id: a.id,
+      title: a.title,
+      body: a.body.slice(0, 150) + "...",
+      url: a.url,
+      source: a.source_info?.name,
+      image: a.imageurl,
+      published_on: a.published_on
+    }));
+    cache.newsCache[cacheKey] = { data: result, ts: Date.now() };
+    return result;
+  } catch (e) {
+    console.error("[MarketIntel] Crypto News fetch failed:", e.message);
+    return [];
+  }
+}
+
+// ─── CCXT Funding Rates ───────────────────────────────────────────────────────
+const ccxt = require("ccxt");
+const exchangeInstances = {
+  binance: new ccxt.binance({ options: { defaultType: "future" } }),
+  bybit: new ccxt.bybit({ options: { defaultType: "swap" } }),
+  mexc: new ccxt.mexc({ options: { defaultType: "swap" } }),
+  okx: new ccxt.okx()
+};
+
+async function fetchFundingRates(exchangeId = "binance") {
+  try {
+    // CCXT does not support MEXC funding rates yet, use direct REST API
+    if (exchangeId === 'mexc') {
+      const response = await fetch("https://contract.mexc.com/api/v1/contract/funding_rate");
+      const json = await response.json();
+      let rates = json.data
+        .filter(r => r.symbol.includes('_USDT') && r.fundingRate !== undefined)
+        .map(r => ({
+          symbol: r.symbol.replace('_USDT', ''),
+          rate: r.fundingRate * 100,
+          price: r.fairPrice || r.idxPrice || null
+        }));
+      rates.sort((a, b) => Math.abs(b.rate) - Math.abs(a.rate));
+      return rates.slice(0, 50);
+    }
+
+    const exchange = exchangeInstances[exchangeId] || exchangeInstances.binance;
+    const fundingRates = await exchange.fetchFundingRates();
+    
+    // Convert to array and filter out irrelevant pairs
+    let rates = Object.values(fundingRates)
+      .filter((r) => r.symbol && r.symbol.includes("USDT") && r.fundingRate !== undefined)
+      .map((r) => {
+        // Handle symbols like ACE/USDT:USDT or ACE/USDT
+        const baseSymbol = r.symbol.split('/')[0];
+        return {
+          symbol: baseSymbol,
+          rate: r.fundingRate * 100, // Convert to percentage
+          price: r.markPrice || r.indexPrice || null
+        };
+      });
+      
+    // Sort by absolute highest funding rates (most extreme sentiment)
+    rates.sort((a, b) => Math.abs(b.rate) - Math.abs(a.rate));
+    
+    return rates.slice(0, 50);
+  } catch (e) {
+    console.error(`[MarketIntel] CCXT Funding Rates (${exchangeId}) fetch failed:`, e.message);
+    return [];
+  }
+}
+
+async function getFundingRatesData(exchangeId = 'binance') {
+  const cacheKey = `funding_${exchangeId}`;
+  if (cache[cacheKey] && (Date.now() - cache[cacheKey].ts) < CACHE_TTL_MS) {
+    return cache[cacheKey].data;
+  }
+  const rates = await fetchFundingRates(exchangeId);
+  if (rates.length > 0) {
+    cache[cacheKey] = { data: rates, ts: Date.now() };
+  }
+  return rates;
+}
+
+// ─── Market Extras (News + Funding) ──────────────────────────────────────────
+async function getMarketExtras(ccKey = null) {
+  if (isFresh(cache.extras) && cache.extras.data.news.length > 0) {
+    return cache.extras.data;
+  }
+  const [news, funding] = await Promise.all([
+    fetchCryptoNews(null, ccKey),
+    fetchFundingRates(),
+  ]);
+  const result = { news, funding };
+  if (news.length > 0) {
+    cache.extras = { data: result, ts: Date.now() };
+  }
+  return result;
+}
+
 // ─── Main Export: Full Market Pulse ──────────────────────────────────────────
 async function getMarketPulse(cmcKey) {
   if (isFresh(cache.pulse) && cache.pulse.data.hasCMC === !!cmcKey) {
@@ -315,10 +429,105 @@ function buildAIContext(pulse) {
   return lines.join("\n");
 }
 
+// ---- NEW: Open Interest Fetcher ----
+async function getOpenInterestData(exchangeId = 'binance') {
+  try {
+    // ALWAYS use Binance for Open Interest (Global Truth)
+    // Binance accounts for ~60% of derivative volume. Even if funding is pulled from MEXC,
+    // Binance's OI provides the most accurate and reliable representation of the sheer money betting.
+    const binanceExchange = exchangeInstances.binance;
+    
+    // We only fetch OI for the top extreme funding rates (top 5 positive, top 5 negative)
+    const rates = await getFundingRatesData(exchangeId);
+    if (!rates || rates.length === 0) return [];
+    
+    // Sort by absolute rate to get the most extreme ones
+    const sortedRates = [...rates].sort((a, b) => Math.abs(b.rate) - Math.abs(a.rate));
+    const extremeRates = sortedRates.slice(0, 10);
+    
+    const oiData = [];
+    for (const r of extremeRates) {
+      try {
+        let symbolWithUsdt = `${r.symbol}/USDT:USDT`;
+        const oiInfo = await binanceExchange.fetchOpenInterest(symbolWithUsdt);
+        const oiValue = oiInfo ? (oiInfo.openInterestValue || oiInfo.openInterestAmount || oiInfo.baseVolume || 0) : 0;
+        oiData.push({ symbol: r.symbol, rate: r.rate, oi: oiValue });
+        
+        // Sleep slightly to prevent hitting Binance API rate limits when fetching multiple symbols
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (e) {
+        oiData.push({ symbol: r.symbol, rate: r.rate, oi: 0 });
+      }
+    }
+    
+    // Filter out coins that have 0 OI (meaning they aren't on Binance or CCXT failed)
+    return oiData.filter(d => d.oi > 0);
+  } catch (e) {
+    console.error(`[MarketIntel] OI fetch failed for ${exchangeId}:`, e.message);
+    return [];
+  }
+}
+
+// ---- NEW: Specific Coin Derivatives for Watchlist ----
+async function getSpecificCoinDerivatives(symbol, exchangeId = 'binance') {
+  try {
+    const binanceExchange = exchangeInstances.binance;
+    let fundingRate = null;
+    let openInterest = null;
+    const symbolWithUsdt = `${symbol.toUpperCase()}/USDT:USDT`;
+
+    // 1. Fetch Funding Rate
+    // For MEXC, the ccxt implementation lacks funding rate, so we rely on our global array cache.
+    // If it's not in the top 50, we might miss it. But let's try direct CCXT for other exchanges.
+    try {
+      if (exchangeId === 'mexc') {
+        // Fallback to Binance funding if on MEXC just for the specific query since we don't have a single-coin MEXC REST endpoint
+        // Or we can check our cache
+        const allRates = await getFundingRatesData('mexc');
+        const found = allRates.find(r => r.symbol === symbol.toUpperCase());
+        if (found) fundingRate = found.rate;
+        else {
+          // Fallback to Binance
+          const info = await binanceExchange.fetchFundingRate(symbolWithUsdt);
+          if (info && info.fundingRate !== undefined) fundingRate = info.fundingRate * 100;
+        }
+      } else {
+        const exchange = exchangeInstances[exchangeId] || binanceExchange;
+        const info = await exchange.fetchFundingRate(symbolWithUsdt);
+        if (info && info.fundingRate !== undefined) fundingRate = info.fundingRate * 100;
+      }
+    } catch (e) {
+      // Ignored, spot-only coin or not on futures
+    }
+
+    // 2. Fetch Open Interest (Always Binance)
+    try {
+      const oiInfo = await binanceExchange.fetchOpenInterest(symbolWithUsdt);
+      if (oiInfo) {
+        openInterest = oiInfo.openInterestValue || oiInfo.openInterestAmount || oiInfo.baseVolume || 0;
+      }
+    } catch (e) {
+      // Ignored
+    }
+
+    return {
+      fundingRate: fundingRate,
+      openInterest: openInterest
+    };
+  } catch (e) {
+    return { fundingRate: null, openInterest: null };
+  }
+}
+
 module.exports = {
   getMarketPulse,
+  getMarketExtras,
+  getFundingRatesData,
+  getOpenInterestData,
+  getSpecificCoinDerivatives,
   fetchCMCCoin,
   fetchLunarCrushSocial,
+  fetchCryptoNews,
   buildAIContext,
   calculateAltcoinSeason,
 };
