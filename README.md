@@ -26,11 +26,16 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ---
 
-## 🛠️ Tech Stack
-- **Frontend:** HTML5, Vanilla CSS (Glassmorphism UI), JavaScript, Chart.js
-- **Backend/Desktop:** Electron, Node.js
-- **Integrations:** CCXT (Crypto APIs), Google Gemini AI, CoinMarketCap, LunarCrush API v4
-- **Security:** Windows DPAPI (`electron.safeStorage`)
+## 🛠️ Tech Stack & Dependencies
+
+NexusDesk uses a highly optimized, minimalist dependency tree to keep the bundle size small.
+
+- **Frontend:** HTML5, Vanilla CSS (Glassmorphism UI), JavaScript, Chart.js (CDN)
+- **Backend/Desktop:** Electron (`electron`), Node.js
+- **Database:** Pure-JS SQLite (`sql.js`) for the Portfolio Vault — No native C++ builds required.
+- **Crypto Exchange APIs:** CCXT (`ccxt`)
+- **AI Engine:** Google Gemini AI (`@google/generative-ai`)
+- **Security:** Windows DPAPI (`electron.safeStorage`) natively provided by Electron.
 
 ---
 
@@ -71,6 +76,8 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ### 1. Install & Run for Development
 
+This app requires exactly 4 NPM dependencies. To set it up cleanly:
+
 ```bash
 # Clone the repository
 git clone https://github.com/Waleed-Khalid-dev/NexusDesk.git
@@ -78,11 +85,11 @@ git clone https://github.com/Waleed-Khalid-dev/NexusDesk.git
 # Navigate to the folder
 cd NexusDesk
 
-# Install all dependencies
+# Install dependencies (@google/generative-ai, ccxt, sql.js, electron)
 npm install
 
 # Start the desktop application
-npm run desktop
+npm start
 ```
 
 *Alternatively, double-click `start.bat` — it installs dependencies on first run automatically.*
@@ -127,6 +134,7 @@ NexusDesk/
 │   ├── market-intel-ui.html Proactive Squeeze Radar & Custom Watchlist UI
 │   ├── ai-chat.html        AI Co-Pilot panel with Market Pulse strip
 │   ├── portfolio.html      Command Center Vault
+│   ├── portfolio.cjs       Vault Encryption and SQLite engine
 │   ├── arbitrage.html      Cross-exchange arbitrage scanner
 │   ├── control.html        Top control bar
 │   ├── preload.cjs         Electron preload
