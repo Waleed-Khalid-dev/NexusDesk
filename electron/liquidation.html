@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Liquidation Heatmap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --bg-deep:    hsl(240, 10%, 4%);
+        --bg-base:    hsl(240, 8%, 7%);
+        --bg-surface: hsl(240, 7%, 11%);
+        --bg-raised:  hsl(240, 6%, 15%);
+        --border:     hsl(240, 5%, 18%);
+        --border-lit: hsl(240, 5%, 26%);
+        --text-hi:    hsl(220, 15%, 96%);
+        --text-mid:   hsl(220, 10%, 65%);
+        --text-lo:    hsl(220, 8%, 40%);
+        --accent-green: hsl(158, 64%, 52%);
+        --accent-sky:   hsl(200, 90%, 60%);
+        --accent-red:   hsl(0, 72%, 58%);
+        --accent-amber: hsl(38, 92%, 50%);
+      }
+      html, body {
+        background: var(--bg-deep);
+        color: var(--text-hi);
+        font-family: 'Inter', system-ui, sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+      }
+
+      /* ── Header ─────────────────────────────────────────────── */
+      .header {
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-shrink: 0;
+      }
+      .header-icon {
+        width: 32px; height: 32px;
+        background: linear-gradient(135deg, hsl(0, 72%, 52%), hsl(38, 90%, 45%));
+        border-radius: 9px;
+        display: grid; place-items: center;
+        box-shadow: 0 0 16px hsla(0, 72%, 58%, 0.25);
+        flex-shrink: 0;
+      }
+      .header-icon svg { width: 16px; height: 16px; color: #fff; }
+      .header-title {
+        font-size: 15px; font-weight: 700; letter-spacing: -0.02em;
+        background: linear-gradient(135deg, hsl(0, 72%, 68%), hsl(38, 92%, 60%));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .header-sub { font-size: 10px; color: var(--text-lo); margin-top: 1px; }
+
+      /* ── Mode Tabs ───────────────────────────────────────────── */
+      .mode-tabs {
+        display: flex;
+        align-items: center;
+        background: var(--bg-raised);
+        border: 1px solid var(--border-lit);
+        border-radius: 8px;
+        padding: 3px;
+        margin-left: auto;
+        gap: 2px;
+      }
+      .mode-tab {
+        padding: 5px 14px;
+        border-radius: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-lo);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: 0.18s;
+      }
+      .mode-tab.active {
+        background: var(--bg-surface);
+        color: var(--text-hi);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      }
+      .mode-tab:not(.active):hover { color: var(--text-mid); background: hsla(240,6%,18%,0.5); }
+
+      /* ── Ticker strip ────────────────────────────────────────── */
+      .ticker-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 18px;
+        background: var(--bg-base);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        overflow-x: auto;
+      }
+      .ticker-strip::-webkit-scrollbar { height: 3px; }
+      .ticker-strip::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 2px; }
+
+      .ticker-label { font-size: 10px; color: var(--text-lo); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
+
+      .ticker-chip {
+        padding: 4px 11px;
+        border-radius: 6px;
+        font-size: 11px; font-weight: 700;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        color: var(--text-mid);
+        cursor: pointer;
+        transition: 0.15s;
+        flex-shrink: 0;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .ticker-chip:hover { border-color: var(--border-lit); color: var(--text-hi); }
+      .ticker-chip.active {
+        background: hsla(0, 72%, 52%, 0.12);
+        border-color: hsla(0, 72%, 52%, 0.4);
+        color: hsl(0, 72%, 72%);
+      }
+
+      /* ── Content area ────────────────────────────────────────── */
+      .content-area {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* ── Web view (free mode) ────────────────────────────────── */
+      webview {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: none;
+      }
+      webview.visible { display: block; }
+
+      /* ── Info overlay (shown before load) ────────────────────── */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: center;
+        padding: 32px;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      .overlay.hidden { opacity: 0; pointer-events: none; }
+      .overlay-icon { font-size: 48px; line-height: 1; }
+      .overlay-title { font-size: 16px; font-weight: 700; color: var(--text-hi); }
+      .overlay-desc { font-size: 12px; color: var(--text-lo); line-height: 1.7; max-width: 360px; }
+      .overlay-spinner {
+        width: 36px; height: 36px;
+        border: 3px solid var(--border-lit);
+        border-top-color: hsl(0, 72%, 58%);
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* ── Notice bar ──────────────────────────────────────────── */
+      .notice {
+        flex-shrink: 0;
+        padding: 7px 18px;
+        font-size: 11px;
+        color: var(--text-lo);
+        background: var(--bg-base);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .notice a { color: var(--accent-sky); text-decoration: none; }
+      .notice a:hover { text-decoration: underline; }
+      .notice-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent-green);
+        box-shadow: 0 0 6px var(--accent-green);
+        flex-shrink: 0;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; box-shadow: 0 0 10px var(--accent-green); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <div class="header-title">Liquidation Heatmap</div>
+        <div class="header-sub">Live cluster analysis — powered by CoinGlass</div>
+      </div>
+
+      <!-- Mode switcher -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabFree" onclick="setMode('free')">🌐 Free View</button>
+        <button class="mode-tab" id="tabLiqMap" onclick="setMode('liqmap')">🗺 Liq Map</button>
+        <button class="mode-tab" id="tabBubbles" onclick="setMode('bubbles')">💥 Bubbles</button>
+      </div>
+    </div>
+
+    <!-- Ticker strip -->
+    <div class="ticker-strip" id="tickerStrip">
+      <span class="ticker-label">Symbol:</span>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area">
+      <!-- Loading overlay -->
+      <div class="overlay" id="overlay">
+        <div class="overlay-spinner"></div>
+        <div class="overlay-title">Loading Liquidation Data…</div>
+        <div class="overlay-desc">Connecting to CoinGlass — free live view</div>
+      </div>
+
+      <!-- The webview loads coinglass.com directly — fully free -->
+      <webview
+        id="cgView"
+        src="about:blank"
+        partition="persist:coinglass"
+        allowpopups
+        webpreferences="contextIsolation=false"
+      ></webview>
+    </div>
+
+    <!-- Notice bar -->
+    <div class="notice">
+      <div class="notice-dot"></div>
+      <span>Free live view via <strong>coinglass.com</strong> — no API key required. &nbsp;·&nbsp; For programmatic API access: <a href="https://coinglass.com" target="_blank">coinglass.com</a> → Profile → API Management (paid).</span>
+    </div>
+
+    <script>
+      const { ipcRenderer, shell } = require('electron');
+
+      const TICKERS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'DOT', 'SUI', 'PEPE'];
+
+      // URL builders for each mode
+      const URLS = {
+        free:    (sym) => `https://www.coinglass.com/pro/futures/LiquidationHeatMap/${sym}`,
+        liqmap:  (sym) => `https://www.coinglass.com/pro/futures/LiquidationHeatMap/${sym}`,
+        bubbles: (sym) => `https://www.coinglass.com/LiquidationData`,
+      };
+
+      let currentMode = 'free';
+      let currentTicker = 'BTC';
+
+      // Build ticker chips
+      const strip = document.getElementById('tickerStrip');
+      const label = document.createElement('span');
+      label.className = 'ticker-label';
+      label.textContent = 'Symbol:';
+      strip.appendChild(label);
+
+      TICKERS.forEach(sym => {
+        const chip = document.createElement('button');
+        chip.className = 'ticker-chip' + (sym === currentTicker ? ' active' : '');
+        chip.textContent = sym;
+        chip.id = 'chip-' + sym;
+        chip.onclick = () => switchTicker(sym);
+        strip.appendChild(chip);
+      });
+
+      function switchTicker(sym) {
+        currentTicker = sym;
+        TICKERS.forEach(s => {
+          const c = document.getElementById('chip-' + s);
+          if (c) c.classList.toggle('active', s === sym);
+        });
+        loadView();
+      }
+
+      function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('tabFree').classList.toggle('active', mode === 'free');
+        document.getElementById('tabLiqMap').classList.toggle('active', mode === 'liqmap');
+        document.getElementById('tabBubbles').classList.toggle('active', mode === 'bubbles');
+        loadView();
+      }
+
+      const view = document.getElementById('cgView');
+      const overlay = document.getElementById('overlay');
+
+      function loadView() {
+        const url = URLS[currentMode](currentTicker);
+        overlay.classList.remove('hidden');
+        overlay.querySelector('.overlay-title').textContent = 'Loading…';
+        overlay.querySelector('.overlay-desc').textContent = url;
+        view.classList.remove('visible');
+        view.src = url;
+      }
+
+      // Hide overlay once webview content loads
+      view.addEventListener('did-finish-load', () => {
+        // Inject dark-mode CSS to blend better with our dark UI
+        view.insertCSS(`
+          html, body {
+            background: #09090b !important;
+          }
+          /* Hide CoinGlass nav/header/footer to maximize chart space */
+          header, nav, .header, .navbar, .navbar-wrapper,
+          .footer, footer, .cg-footer, .site-footer,
+          .cookie-banner, .cookies-notice, .alert-bar,
+          .topbar, .top-bar, .announcement-bar {
+            display: none !important;
+          }
+        `).catch(() => {});
+
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          view.classList.add('visible');
+        }, 800);
+      });
+
+      view.addEventListener('did-fail-load', (_e, errCode, errDesc) => {
+        overlay.querySelector('.overlay-spinner').style.display = 'none';
+        overlay.querySelector('.overlay-title').textContent = 'Failed to load';
+        overlay.querySelector('.overlay-desc').textContent = errDesc || 'Check your internet connection.';
+      });
+
+      // Open external links (e.g. login redirects) in the system browser
+      view.addEventListener('new-window', (e) => {
+        e.preventDefault();
+        shell.openExternal(e.url);
+      });
+
+      // Receive ticker from main process (synced with chart)
+      ipcRenderer.on('set-ticker', (_e, ticker) => {
+        if (!ticker) return;
+        const sym = ticker.replace('/USDT', '').replace('/USD', '').replace(':USDT', '');
+        if (TICKERS.includes(sym)) {
+          switchTicker(sym);
+        } else {
+          // Ticker not in preset list — load it anyway
+          currentTicker = sym;
+          loadView();
+        }
+      });
+
+      // Initial load
+      loadView();
+    </script>
+  </body>
+</html>
