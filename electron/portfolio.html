@@ -253,6 +253,9 @@
             <option value="bybit">Bybit</option>
             <option value="mexc">MEXC</option>
             <option value="okx">OKX</option>
+            <option value="gate">Gate.io</option>
+            <option value="kucoin">KuCoin</option>
+            <option value="hyperliquid">Hyperliquid</option>
           </select>
         </div>
         <div class="form-group">
@@ -352,6 +355,29 @@
           <button class="btn" style="background: linear-gradient(180deg, hsl(200,80%,50%), hsl(200,90%,40%)); box-shadow: 0 2px 10px hsla(200,90%,60%,0.2);" id="saveLunarBtn">Save LunarCrush Key</button>
         </div>
         <div id="lunarStatus" class="status-msg"></div>
+
+
+
+      <!-- P&L Portfolio Tracker -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Portfolio P&amp;L Tracker
+        </div>
+        <p style="font-size:11px; color:var(--text-lo); margin-bottom:14px; line-height:1.6;">Tracks your total portfolio value over time. Each snapshot captures a USD value from all connected exchanges.</p>
+        <div style="display:flex; gap:10px; margin-bottom:16px; align-items:center;">
+          <button class="btn" id="snapshotBtn" style="padding:9px 16px; font-size:12px;">📸 Take Snapshot Now</button>
+          <select id="pnlDays" style="width:auto; padding:9px 13px; font-size:12px; background:var(--bg-raised); color:var(--text-hi); border:1px solid var(--border-lit); border-radius:9px; outline:none;">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <span id="snapshotStatus" style="font-size:11px; color:var(--text-lo);"></span>
+        </div>
+        <div style="position:relative; height:200px;">
+          <canvas id="pnlChart"></canvas>
+          <div id="pnlEmpty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-lo);font-size:12px;">No snapshots yet — click &quot;Take Snapshot Now&quot; to begin tracking.</div>
+        </div>
       </div>
 
       <!-- Trade Execution Engine -->
@@ -389,6 +415,7 @@
       </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
       const { ipcRenderer } = require('electron');
 
@@ -576,7 +603,7 @@
         }
       };
 
-      // Pre-fill placeholder if CMC key already exists
+      // Pre-fill placeholder if keys already exist
       ipcRenderer.invoke('has-api-key', 'cmc').then(res => {
         if (res.hasKey) document.getElementById('cmcKey').placeholder = '•••••••••••••••• (Encrypted)';
       });
@@ -586,6 +613,120 @@
       ipcRenderer.invoke('has-api-key', 'lunarcrush').then(res => {
         if (res.hasKey) document.getElementById('lunarKey').placeholder = '•••••••••••••••• (Encrypted)';
       });
+
+
+      // ── P&L Chart ─────────────────────────────────────────────────────────
+      let pnlChart = null;
+
+      function renderPnlChart(history) {
+        const canvas = document.getElementById('pnlChart');
+        const emptyEl = document.getElementById('pnlEmpty');
+
+        if (!history || history.length === 0) {
+          canvas.style.display = 'none';
+          emptyEl.style.display = 'flex';
+          return;
+        }
+
+        emptyEl.style.display = 'none';
+        canvas.style.display = 'block';
+
+        const labels = history.map(h => {
+          const d = new Date(h.timestamp);
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+        const values = history.map(h => h.total_usd);
+        const maxVal = Math.max(...values);
+        const minVal = Math.min(...values);
+        const delta = maxVal - minVal;
+
+        if (pnlChart) pnlChart.destroy();
+
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+        gradient.addColorStop(0, 'hsla(158, 64%, 52%, 0.35)');
+        gradient.addColorStop(1, 'hsla(158, 64%, 52%, 0.0)');
+
+        pnlChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Portfolio USD',
+              data: values,
+              borderColor: 'hsl(158, 64%, 52%)',
+              borderWidth: 2,
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.4,
+              pointRadius: values.length > 20 ? 0 : 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: 'hsl(158, 64%, 52%)',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'hsl(240,8%,10%)',
+                borderColor: 'hsl(240,5%,26%)',
+                borderWidth: 1,
+                titleColor: 'hsl(220,15%,96%)',
+                bodyColor: 'hsl(158, 64%, 52%)',
+                callbacks: {
+                  label: (ctx) => ' $' + ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                }
+              }
+            },
+            scales: {
+              x: { grid: { color: 'hsla(240,5%,18%,0.6)' }, ticks: { color: 'hsl(220,8%,40%)', font: { size: 10 } } },
+              y: {
+                grid: { color: 'hsla(240,5%,18%,0.6)' },
+                ticks: {
+                  color: 'hsl(220,8%,40%)',
+                  font: { size: 10, family: 'JetBrains Mono' },
+                  callback: (v) => '$' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0))
+                },
+                suggestedMin: minVal * 0.97,
+                suggestedMax: maxVal * 1.03,
+              }
+            }
+          }
+        });
+      }
+
+      async function loadPnlChart() {
+        const days = parseInt(document.getElementById('pnlDays').value) || 30;
+        const res = await ipcRenderer.invoke('get-pnl-history', days);
+        if (res.success) renderPnlChart(res.history);
+      }
+
+      document.getElementById('pnlDays').onchange = loadPnlChart;
+      loadPnlChart();
+
+      document.getElementById('snapshotBtn').onclick = async () => {
+        const btn = document.getElementById('snapshotBtn');
+        const status = document.getElementById('snapshotStatus');
+        btn.disabled = true;
+        btn.textContent = '⏳ Snapshotting...';
+        status.textContent = '';
+        const res = await ipcRenderer.invoke('take-pnl-snapshot');
+        btn.disabled = false;
+        btn.textContent = '📸 Take Snapshot Now';
+        if (res.success) {
+          const snap = res.snapshot;
+          status.textContent = snap ? `✓ Saved: $${snap.totalUsd.toFixed(2)}` : '✓ Snapshot saved.';
+          status.style.color = 'var(--accent-green)';
+          loadPnlChart();
+        } else {
+          status.textContent = '✗ ' + (res.error || 'Failed');
+          status.style.color = 'var(--accent-red)';
+        }
+        setTimeout(() => status.textContent = '', 5000);
+      };
     </script>
   </body>
 </html>

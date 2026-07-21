@@ -170,14 +170,17 @@ async function fetchCMCCoin(symbol, cmcKey) {
 }
 
 // ─── LunarCrush Social Metrics ────────────────────────────────────────────────
-// Uses LunarCrush public v4 API — no key required for basic coin metrics
-async function fetchLunarCrushSocial(symbol) {
+// Uses LunarCrush public v4 API — API key highly recommended to avoid 401/rate-limits
+async function fetchLunarCrushSocial(symbol, apiKey = null) {
   if (isFresh(cache.socialCache[symbol])) return cache.socialCache[symbol].data;
   try {
+    const headers = apiKey ? { "Authorization": `Bearer ${apiKey}` } : {};
     const data = await httpGet(
-      `https://lunarcrush.com/api4/public/coins/${symbol.toLowerCase()}/v1`
+      `https://lunarcrush.com/api4/public/topic/${symbol.toLowerCase()}/v1`,
+      headers
     );
-    const c = data.data;
+    if (data.error) throw new Error(data.error);
+    const c = data.topic ? data : data.data; // Handle both flat and wrapped responses
     if (!c) throw new Error("No LunarCrush data for " + symbol);
     const result = {
       galaxyScore: c.galaxy_score,          // 0-100 combined health score
@@ -298,6 +301,7 @@ async function fetchFundingRates(exchangeId = "binance") {
         const baseSymbol = r.symbol.split('/')[0];
         return {
           symbol: baseSymbol,
+          rawSymbol: r.symbol,
           rate: r.fundingRate * 100, // Convert to percentage
           price: r.markPrice || r.indexPrice || null
         };
@@ -519,12 +523,45 @@ async function getSpecificCoinDerivatives(symbol, exchangeId = 'binance') {
   }
 }
 
+// ─── Historical Funding Rate (Sparklines) ────────────────────────────────────
+/**
+ * Fetch the last N funding rate periods for a single symbol.
+ * Returns array of { timestamp, rate } sorted oldest → newest.
+ * @param {string} symbol - e.g. "BTC"
+ * @param {string} exchangeId - ccxt exchange id
+ * @param {number} limit - number of historical periods (default 8)
+ */
+async function fetchFundingRateHistory(symbol, exchangeId = 'binance', limit = 8) {
+  try {
+    const exchange = exchangeInstances[exchangeId] || exchangeInstances.binance;
+    // Use rawSymbol directly if it contains a slash, otherwise fallback to guessing
+    const symbolWithUsdt = symbol.includes('/') ? symbol : `${symbol.toUpperCase()}/USDT:USDT`;
+
+    if (typeof exchange.fetchFundingRateHistory !== 'function') return [];
+
+    const history = await exchange.fetchFundingRateHistory(symbolWithUsdt, undefined, limit);
+    if (!Array.isArray(history)) return [];
+
+    return history
+      .slice(-limit)
+      .map(h => ({
+        timestamp: h.timestamp,
+        rate: h.fundingRate !== undefined ? h.fundingRate * 100 : null,
+      }))
+      .filter(h => h.rate !== null);
+  } catch (e) {
+    console.warn(`[MarketIntel] Funding history failed for ${symbol} on ${exchangeId}:`, e.message);
+    return [];
+  }
+}
+
 module.exports = {
   getMarketPulse,
   getMarketExtras,
   getFundingRatesData,
   getOpenInterestData,
   getSpecificCoinDerivatives,
+  fetchFundingRateHistory,
   fetchCMCCoin,
   fetchLunarCrushSocial,
   fetchCryptoNews,

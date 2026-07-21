@@ -16,6 +16,7 @@ const {
 const path = require("path");
 const fs = require("fs");
 const marketIntel = require("./market-intel.cjs");
+const portfolioService = require("./portfolio.cjs");
 
 const TOP_H = 78;
 const SPLIT_W = 6;
@@ -513,9 +514,16 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
   startFundingAlertWatcher();
+  // Init P&L SQLite database
+  try {
+    await portfolioService.initDB(app.getPath("userData"));
+    console.log("[main] Portfolio DB ready.");
+  } catch (e) {
+    console.error("[main] Portfolio DB init failed:", e.message);
+  }
   app.on("activate", () => {
     if (BaseWindow.getAllWindows().length === 0) createWindow();
   });
@@ -1066,10 +1074,11 @@ ipcMain.handle("get-coin-intelligence", async (_e, symbol, exchangeId = 'binance
   try {
     const keys = loadKeys();
     const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
+    const lcKey = keys["lunarcrush"] ? safeStorage.decryptString(Buffer.from(keys["lunarcrush"].key, "base64")) : null;
     if (!cmcKey) return { success: false, error: "No CoinMarketCap API key found in Vault." };
     const [coinData, socialData, derivatives] = await Promise.all([
       marketIntel.fetchCMCCoin(symbol, cmcKey),
-      marketIntel.fetchLunarCrushSocial(symbol),
+      marketIntel.fetchLunarCrushSocial(symbol, lcKey),
       marketIntel.getSpecificCoinDerivatives(symbol, exchangeId),
     ]);
     return { success: true, coin: coinData, social: socialData, derivatives: derivatives };
@@ -1450,3 +1459,170 @@ function startFundingAlertWatcher() {
   }, 15 * 60 * 1000);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 7: Auto-Refresh Timer
+// ═══════════════════════════════════════════════════════════════════════════
+let autoRefreshInterval = null;
+
+ipcMain.handle("set-auto-refresh", (_e, seconds) => {
+  // Clear any existing interval
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+
+  if (!seconds || seconds <= 0) {
+    return { success: true, active: false };
+  }
+
+  // Set the new polling interval
+  autoRefreshInterval = setInterval(async () => {
+    try {
+      // Re-fire the market intel UI refresh by broadcasting to market intel windows
+      const wins = BrowserWindow.getAllWindows();
+      wins.forEach(win => {
+        if (!win.isDestroyed()) {
+          win.webContents.send("auto-refresh-tick");
+        }
+      });
+    } catch (e) {
+      console.error("[AutoRefresh] Error:", e.message);
+    }
+  }, seconds * 1000);
+
+  return { success: true, active: true, intervalSeconds: seconds };
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 7: Funding Rate History (Sparklines)
+// ═══════════════════════════════════════════════════════════════════════════
+ipcMain.handle("get-funding-rate-history", async (_e, symbol, exchangeId = "binance", limit = 8) => {
+  try {
+    const history = await marketIntel.fetchFundingRateHistory(symbol, exchangeId, limit);
+    return { success: true, history };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 7: New Exchange Keys (Gate.io, KuCoin, Hyperliquid)
+// ═══════════════════════════════════════════════════════════════════════════
+const SUPPORTED_NEW_EXCHANGES = ["gate", "kucoin", "hyperliquid"];
+
+// Reuse existing save-api-key IPC — it already supports any exchange name.
+// These exchanges just need to appear in the portfolio.html UI.
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 7: P&L Snapshot & History
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fetch current prices for all held assets using CoinGecko (free, no key).
+ * Returns { BTC: 65000, ETH: 3500, ... }
+ */
+async function fetchPricesForAssets(symbols) {
+  try {
+    if (!symbols || symbols.length === 0) return {};
+    // Map common tickers to CoinGecko IDs
+    const geckoIds = {
+      BTC: "bitcoin", ETH: "ethereum", SOL: "solana", BNB: "binancecoin",
+      XRP: "ripple", ADA: "cardano", DOGE: "dogecoin", MATIC: "matic-network",
+      DOT: "polkadot", AVAX: "avalanche-2", LINK: "chainlink", UNI: "uniswap",
+      ATOM: "cosmos", LTC: "litecoin", BCH: "bitcoin-cash", SUI: "sui",
+      PEPE: "pepe", SHIB: "shiba-inu", TRX: "tron", NEAR: "near",
+    };
+
+    const ids = [...new Set(symbols.map(s => geckoIds[s.toUpperCase()]).filter(Boolean))];
+    if (ids.length === 0) return {};
+
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd`;
+    const { net } = require("electron");
+    return new Promise((resolve) => {
+      const req = net.request({ url, method: "GET" });
+      let body = "";
+      req.on("response", (res) => {
+        res.on("data", (c) => (body += c));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(body);
+            const prices = {};
+            for (const [sym, id] of Object.entries(geckoIds)) {
+              if (json[id]?.usd) prices[sym] = json[id].usd;
+            }
+            resolve(prices);
+          } catch { resolve({}); }
+        });
+      });
+      req.on("error", () => resolve({}));
+      req.end();
+    });
+  } catch { return {}; }
+}
+
+ipcMain.handle("take-pnl-snapshot", async () => {
+  try {
+    const keys = loadKeys();
+    const exchangeIds = Object.keys(keys).filter(
+      k => !["gemini", "cmc", "lunarcrush", "cryptocompare"].includes(k)
+    );
+
+    if (exchangeIds.length === 0) {
+      return { success: false, error: "No exchange keys connected." };
+    }
+
+    const ccxt = require("ccxt");
+    const allSymbols = new Set(["USDT", "BUSD", "USDC"]);
+    const balancesMap = {};
+
+    for (const exId of exchangeIds) {
+      if (!ccxt[exId] || !keys[exId]?.key) continue;
+      try {
+        const k = safeStorage.decryptString(Buffer.from(keys[exId].key, "base64"));
+        const s = safeStorage.decryptString(Buffer.from(keys[exId].secret, "base64"));
+        const exchange = new ccxt[exId]({ apiKey: k, secret: s, enableRateLimit: true });
+
+        let merged = {};
+        try {
+          const spot = await exchange.fetchBalance({ type: "spot" });
+          for (const [coin, val] of Object.entries(spot.total || {})) {
+            if (val > 0) { merged[coin] = (merged[coin] || 0) + val; allSymbols.add(coin); }
+          }
+        } catch { /* spot may not be available */ }
+        try {
+          const swap = await exchange.fetchBalance({ type: "swap" });
+          for (const [coin, val] of Object.entries(swap.total || {})) {
+            if (val > 0) { merged[coin] = (merged[coin] || 0) + val; allSymbols.add(coin); }
+          }
+        } catch { /* futures may not be available */ }
+
+        if (Object.keys(merged).length > 0) balancesMap[exId] = merged;
+      } catch (e) {
+        console.warn(`[PnL Snapshot] Failed for ${exId}:`, e.message);
+      }
+    }
+
+    if (Object.keys(balancesMap).length === 0) {
+      return { success: false, error: "Could not fetch balances from any connected exchange." };
+    }
+
+    // Fetch current prices for all held assets
+    const prices = await fetchPricesForAssets([...allSymbols]);
+    const result = portfolioService.takeSnapshot(app.getPath("userData"), balancesMap, prices);
+
+    return { success: true, snapshot: result };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("get-pnl-history", (_e, days = 30) => {
+  try {
+    const history = portfolioService.getHistory(days);
+    return { success: true, history };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
