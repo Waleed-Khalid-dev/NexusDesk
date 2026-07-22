@@ -154,7 +154,12 @@ function coinGlassUrl(ticker, exchange) {
   const t = String(ticker || "BTC")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
-  const ex = String(exchange || "BINANCE").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  let ex = String(exchange || "BINANCE").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  
+  // Coinglass Liquidation Heatmap supports specific exchanges. Fallback to BINANCE if unsupported.
+  const supported = ["BINANCE", "BYBIT", "OKX", "BITGET", "HUOBI"];
+  if (!supported.includes(ex)) ex = "BINANCE";
+
   return `https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=${t}&exchange=${ex}`;
 }
 
@@ -403,9 +408,16 @@ function setSymbol(payload, { reload = true } = {}) {
   if (reload) {
     if (chartView) chartView.webContents.loadURL(tradingViewUrl(t, ex));
     if (heatmapView) heatmapView.webContents.loadURL(coinGlassUrl(t, ex));
-    // Auto-navigate CMC when symbol changes
+    // Auto-navigate CMC when symbol changes using dynamic slug resolution
     if (cmcView && cmcActiveTab === "coin") {
-      cmcView.webContents.loadURL(cmcCoinUrl(t));
+      const keys = loadKeys();
+      const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
+      marketIntel.fetchCMCCoin(t, cmcKey).then(data => {
+        const resolvedSlug = data && data.slug ? data.slug : cmcSlug(t);
+        cmcView.webContents.loadURL(`https://coinmarketcap.com/currencies/${resolvedSlug}/`);
+      }).catch(() => {
+        cmcView.webContents.loadURL(cmcCoinUrl(t));
+      });
     }
   }
 
@@ -691,7 +703,14 @@ ipcMain.on("cmc-tab", (_e, tab) => {
   if (tab === "market") {
     cmcView.webContents.loadURL(cmcChartsUrl());
   } else if (tab === "coin") {
-    cmcView.webContents.loadURL(cmcCoinUrl(currentTicker));
+    const keys = loadKeys();
+    const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
+    marketIntel.fetchCMCCoin(currentTicker, cmcKey).then(data => {
+      const resolvedSlug = data && data.slug ? data.slug : cmcSlug(currentTicker);
+      cmcView.webContents.loadURL(`https://coinmarketcap.com/currencies/${resolvedSlug}/`);
+    }).catch(() => {
+      cmcView.webContents.loadURL(cmcCoinUrl(currentTicker));
+    });
   }
   
   broadcastState();

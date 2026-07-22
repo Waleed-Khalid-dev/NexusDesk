@@ -47,6 +47,7 @@ NexusDesk uses a highly optimized, minimalist dependency tree to keep the bundle
 - **Custom Pro-Watchlist** — Build a personalized watchlist that tracks Price, Social Galaxy Score, Funding Rates, and Open Interest. Uniquely supports **per-coin exchange selection** (e.g., track BTC from Binance and DEXE from MEXC in the same list).
 - **Live Funding Rate Sparklines** — Track 12-hour derivative funding trends visually directly within the watchlist, using dynamic micro-charts rendered via Chart.js and CCXT.
 - **Community Sentiment Engine** — Integrated LunarCrush v4 API for live Galaxy Scores and Bullish/Bearish ratio metrics.
+- **Smart Search Synchronization** � Intelligently resolves coin slugs via API for CoinMarketCap and applies automatic fallbacks for the Coinglass Heatmap to guarantee perfect cross-panel rendering without 404 errors.
 - **AI Co-Pilot** — Ask anything. The AI already knows your balance, the Fear & Greed Index, top movers, BTC dominance, and market sentiment before you type a word.
 - **Arbitrage Scanner** — Detect price spreads across all your connected exchanges for a single pair, Top 100 Gainers, or Top 100 Losers.
 - **Command Center Vault** — Manage all your API keys (Binance, Gemini AI, CMC, LunarCrush) in one place. All keys are encrypted using Windows DPAPI — never stored in plain text.

@@ -148,6 +148,7 @@ async function fetchCMCCoin(symbol, cmcKey) {
     const result = {
       name: c.name,
       symbol: c.symbol,
+      slug: c.slug,
       cmcRank: c.cmc_rank,
       price: c.quote?.USD?.price,
       marketCap: c.quote?.USD?.market_cap,
