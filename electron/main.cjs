@@ -479,6 +479,11 @@ function createWindow() {
         },
       },
     }));
+
+    // Ignore beforeunload prompts (e.g. TradingView unsaved changes) so setSymbol loadURL doesn't hang
+    view.webContents.on('will-prevent-unload', (event) => {
+      event.preventDefault();
+    });
   }
 
   // z-order: panes first, splitters on top so drag works
