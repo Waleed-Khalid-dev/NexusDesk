@@ -26,16 +26,11 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
-
-NexusDesk uses a highly optimized, minimalist dependency tree to keep the bundle size small.
-
-- **Frontend:** HTML5, Vanilla CSS (Glassmorphism UI), JavaScript, Chart.js (CDN)
-- **Backend/Desktop:** Electron (`electron`), Node.js
-- **Database:** Pure-JS SQLite (`sql.js`) for the Portfolio Vault — No native C++ builds required.
-- **Crypto Exchange APIs:** CCXT (`ccxt`)
-- **AI Engine:** Google Gemini AI (`@google/generative-ai`)
-- **Security:** Windows DPAPI (`electron.safeStorage`) natively provided by Electron.
+## 🛠️ Tech Stack
+- **Frontend:** HTML5, Vanilla CSS (Glassmorphism UI), JavaScript
+- **Backend/Desktop:** Electron, Node.js
+- **Integrations:** CCXT (Crypto APIs), Google Gemini AI, CoinMarketCap, LunarCrush
+- **Security:** Windows DPAPI (`electron.safeStorage`)
 
 ---
 
@@ -45,9 +40,6 @@ NexusDesk uses a highly optimized, minimalist dependency tree to keep the bundle
 - **Extreme Squeeze Radar** — Background observer tracking Live Funding Rates across exchanges. If any coin hits an extreme threshold (±0.5%), the app sends a desktop push notification and highlights it on the radar for potential short-squeezes.
 - **Open Interest (OI) Tracking** — Automatically fetches Binance Global OI for extreme sentiment coins, showing exactly how much capital is fueling a squeeze.
 - **Custom Pro-Watchlist** — Build a personalized watchlist that tracks Price, Social Galaxy Score, Funding Rates, and Open Interest. Uniquely supports **per-coin exchange selection** (e.g., track BTC from Binance and DEXE from MEXC in the same list).
-- **Live Funding Rate Sparklines** — Track 12-hour derivative funding trends visually directly within the watchlist, using dynamic micro-charts rendered via Chart.js and CCXT.
-- **Community Sentiment Engine** — Integrated LunarCrush v4 API for live Galaxy Scores and Bullish/Bearish ratio metrics.
-- **Smart Search Synchronization** � Intelligently resolves coin slugs via API for CoinMarketCap and applies automatic fallbacks for the Coinglass Heatmap to guarantee perfect cross-panel rendering without 404 errors.
 - **AI Co-Pilot** — Ask anything. The AI already knows your balance, the Fear & Greed Index, top movers, BTC dominance, and market sentiment before you type a word.
 - **Arbitrage Scanner** — Detect price spreads across all your connected exchanges for a single pair, Top 100 Gainers, or Top 100 Losers.
 - **Command Center Vault** — Manage all your API keys (Binance, Gemini AI, CMC, LunarCrush) in one place. All keys are encrypted using Windows DPAPI — never stored in plain text.
@@ -77,8 +69,6 @@ NexusDesk uses a highly optimized, minimalist dependency tree to keep the bundle
 
 ### 1. Install & Run for Development
 
-This app requires exactly 4 NPM dependencies. To set it up cleanly:
-
 ```bash
 # Clone the repository
 git clone https://github.com/Waleed-Khalid-dev/NexusDesk.git
@@ -86,11 +76,11 @@ git clone https://github.com/Waleed-Khalid-dev/NexusDesk.git
 # Navigate to the folder
 cd NexusDesk
 
-# Install dependencies (@google/generative-ai, ccxt, sql.js, electron)
+# Install all dependencies
 npm install
 
 # Start the desktop application
-npm start
+npm run desktop
 ```
 
 *Alternatively, double-click `start.bat` — it installs dependencies on first run automatically.*
@@ -117,7 +107,7 @@ Once finished, look inside the newly created `dist/` folder. You will find `Nexu
 |---|---|---|
 | **Google Gemini API** | Powers the AI Co-Pilot | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — Free |
 | **CoinMarketCap API** | Market cap, volume, top movers, supply data | [coinmarketcap.com/api](https://coinmarketcap.com/api/) — Free tier |
-| **LunarCrush API v4** | Social sentiment, Galaxy Score, AltRank | [lunarcrush.com](https://lunarcrush.com/) — Requires Individual Plan |
+| **LunarCrush API** | Social sentiment, Galaxy Score, AltRank | [lunarcrush.com](https://lunarcrush.com/) — Free tier |
 | **Binance API** | Live balance + optional trade execution | Binance → Account → API Management |
 | **Other exchanges** | Any CCXT-supported exchange | Add in Vault |
 
@@ -135,7 +125,6 @@ NexusDesk/
 │   ├── market-intel-ui.html Proactive Squeeze Radar & Custom Watchlist UI
 │   ├── ai-chat.html        AI Co-Pilot panel with Market Pulse strip
 │   ├── portfolio.html      Command Center Vault
-│   ├── portfolio.cjs       Vault Encryption and SQLite engine
 │   ├── arbitrage.html      Cross-exchange arbitrage scanner
 │   ├── control.html        Top control bar
 │   ├── preload.cjs         Electron preload
