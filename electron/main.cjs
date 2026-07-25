@@ -60,6 +60,11 @@ let currentTicker = "BTC";
 let currentExchange = "BINANCE";
 let executionMode = false;
 
+let workspaceTabs = [
+  { id: "tab-1", ticker: "BTC", exchange: "BINANCE", label: "BINANCE: BTC" }
+];
+let activeTabId = "tab-1";
+
 /** @type {{ side: 'left' | 'right' | 'bottom', startX?: number, startY?: number, startLeft?: number, startRight?: number, startCmcHeight?: number } | null} */
 let drag = null;
 
@@ -98,6 +103,27 @@ function loadSettings() {
       currentExchange = data.exchange.toUpperCase().replace(/[^A-Z0-9]/g, "") || "BINANCE";
     if (typeof data.executionMode === "boolean") executionMode = data.executionMode;
     if (typeof data.aiWidth === "number") aiWidth = clamp(data.aiWidth, 260, 800);
+
+    if (Array.isArray(data.workspaceTabs) && data.workspaceTabs.length > 0) {
+      workspaceTabs = data.workspaceTabs.map(t => ({
+        id: String(t.id || `tab-${Math.random().toString(36).substr(2, 5)}`),
+        ticker: String(t.ticker || "BTC").toUpperCase().replace(/[^A-Z0-9]/g, "") || "BTC",
+        exchange: String(t.exchange || "BINANCE").toUpperCase().replace(/[^A-Z0-9]/g, "") || "BINANCE",
+        label: String(t.label || `${t.exchange || 'BINANCE'}: ${t.ticker || 'BTC'}`),
+      }));
+    }
+    if (typeof data.activeTabId === "string" && workspaceTabs.some(t => t.id === data.activeTabId)) {
+      activeTabId = data.activeTabId;
+    } else if (workspaceTabs.length > 0) {
+      activeTabId = workspaceTabs[0].id;
+    }
+
+    const activeTab = workspaceTabs.find(t => t.id === activeTabId);
+    if (activeTab) {
+      currentTicker = activeTab.ticker;
+      currentExchange = activeTab.exchange;
+    }
+
     enforceCenterMin();
   } catch {
     /* first run */
@@ -118,6 +144,8 @@ function saveSettings() {
           exchange: currentExchange,
           executionMode,
           aiWidth,
+          workspaceTabs,
+          activeTabId,
         },
         null,
         2
@@ -127,6 +155,7 @@ function saveSettings() {
     /* ignore */
   }
 }
+
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -375,6 +404,8 @@ function statePayload() {
     rightPct,
     cmcHeight,
     aiWidth,
+    workspaceTabs,
+    activeTabId,
     quick: TOP_COINS,
   };
 }
@@ -404,6 +435,18 @@ function setSymbol(payload, { reload = true } = {}) {
 
   currentTicker = t;
   currentExchange = ex;
+
+  // Keep active tab updated
+  const currTab = workspaceTabs.find(tab => tab.id === activeTabId);
+  if (currTab) {
+    const isCustomLabel = currTab.label && !currTab.label.includes(":");
+    currTab.ticker = t;
+    currTab.exchange = ex;
+    if (!isCustomLabel) {
+      currTab.label = `${ex}: ${t}`;
+    }
+  }
+
 
   if (reload) {
     if (chartView) chartView.webContents.loadURL(tradingViewUrl(t, ex));
@@ -559,6 +602,55 @@ ipcMain.handle("get-state", () => statePayload());
 ipcMain.on("set-symbol", (_e, payload) => {
   setSymbol(payload);
 });
+
+ipcMain.on("create-tab", (_e, payload) => {
+  const newId = `tab-${Date.now()}`;
+  const t = (payload && payload.ticker) ? String(payload.ticker).toUpperCase().replace(/[^A-Z0-9]/g, "") : currentTicker;
+  const ex = (payload && payload.exchange) ? String(payload.exchange).toUpperCase().replace(/[^A-Z0-9]/g, "") : currentExchange;
+  const newTab = {
+    id: newId,
+    ticker: t,
+    exchange: ex,
+    label: `${ex}: ${t}`
+  };
+  workspaceTabs.push(newTab);
+  activeTabId = newId;
+  setSymbol({ ticker: t, exchange: ex });
+});
+
+ipcMain.on("switch-tab", (_e, tabId) => {
+  const target = workspaceTabs.find(t => t.id === tabId);
+  if (!target) return;
+  activeTabId = tabId;
+  setSymbol({ ticker: target.ticker, exchange: target.exchange });
+});
+
+ipcMain.on("close-tab", (_e, tabId) => {
+  if (workspaceTabs.length <= 1) return; // Keep at least 1 tab open
+  const idx = workspaceTabs.findIndex(t => t.id === tabId);
+  if (idx === -1) return;
+
+  workspaceTabs.splice(idx, 1);
+  if (activeTabId === tabId) {
+    const nextTab = workspaceTabs[Math.max(0, idx - 1)];
+    activeTabId = nextTab.id;
+    setSymbol({ ticker: nextTab.ticker, exchange: nextTab.exchange });
+  } else {
+    saveSettings();
+    broadcastState();
+  }
+});
+
+ipcMain.on("rename-tab", (_e, payload) => {
+  if (!payload || !payload.id || !payload.label) return;
+  const target = workspaceTabs.find(t => t.id === payload.id);
+  if (target) {
+    target.label = String(payload.label).trim().slice(0, 20) || `${target.exchange}: ${target.ticker}`;
+    saveSettings();
+    broadcastState();
+  }
+});
+
 
 ipcMain.on("toggle-left", () => {
   leftCollapsed = !leftCollapsed;

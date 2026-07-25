@@ -323,6 +323,83 @@
         animation: divider-glow 2s ease-in-out infinite alternate;
       }
       .cmc-divider.visible { display: block; }
+
+      /* --- WORKSPACE TABS --- */
+      .tabs-bar {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 450px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-app-region: no-drag;
+      }
+      .tabs-bar::-webkit-scrollbar {
+        display: none;
+      }
+      .tab-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #a1a1aa;
+        background: #18181b;
+        border: 1px solid #27272a;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+      }
+      .tab-item:hover {
+        background: #27272a;
+        color: #fafafa;
+        border-color: #3f3f46;
+      }
+      .tab-item.active {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+      }
+      .tab-item .close-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        font-size: 10px;
+        color: #71717a;
+        transition: all 0.2s;
+        margin-left: 2px;
+      }
+      .tab-item .close-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+      }
+      .btn-add-tab {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        background: #18181b;
+        border: 1px solid #27272a;
+        color: #a1a1aa;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-app-region: no-drag;
+      }
+      .btn-add-tab:hover {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+      }
     </style>
   </head>
   <body>
@@ -334,8 +411,13 @@
           <h1>Crypto Hub</h1>
         </div>
 
+        <!-- WORKSPACE TABS -->
+        <div class="tabs-bar" id="workspaceTabsBar"></div>
+        <button class="btn-add-tab" id="btnAddTab" title="Open New Workspace Tab">+</button>
+
         <!-- OMNIBAR -->
         <div class="omnibar">
+
           <select id="exchange">
             <option value="BINANCE">BINANCE</option>
             <option value="BYBIT">BYBIT</option>
@@ -467,6 +549,49 @@
         document.getElementById("toggleAi").classList.toggle("active", !!state.aiPanelOpen);
       }
 
+      const workspaceTabsBar = document.getElementById("workspaceTabsBar");
+      const btnAddTab = document.getElementById("btnAddTab");
+
+      function renderWorkspaceTabs() {
+        if (!workspaceTabsBar) return;
+        workspaceTabsBar.innerHTML = "";
+        const tabs = state.workspaceTabs || [];
+        const activeId = state.activeTabId || (tabs[0] && tabs[0].id);
+
+        for (const t of tabs) {
+          const tabEl = document.createElement("div");
+          tabEl.className = `tab-item${t.id === activeId ? " active" : ""}`;
+
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = t.label || `${t.exchange}: ${t.ticker}`;
+          labelSpan.onclick = () => window.hub.switchTab(t.id);
+
+          labelSpan.ondblclick = (e) => {
+            e.stopPropagation();
+            const newName = prompt("Rename Tab Label:", t.label || `${t.exchange}: ${t.ticker}`);
+            if (newName && newName.trim()) {
+              window.hub.renameTab({ id: t.id, label: newName.trim() });
+            }
+          };
+
+          tabEl.appendChild(labelSpan);
+
+          if (tabs.length > 1) {
+            const closeBtn = document.createElement("span");
+            closeBtn.className = "close-btn";
+            closeBtn.innerHTML = "&times;";
+            closeBtn.title = "Close Tab";
+            closeBtn.onclick = (e) => {
+              e.stopPropagation();
+              window.hub.closeTab(t.id);
+            };
+            tabEl.appendChild(closeBtn);
+          }
+
+          workspaceTabsBar.appendChild(tabEl);
+        }
+      }
+
       function applyState(s) {
         state = { ...state, ...s };
         active.textContent = state.ticker;
@@ -483,14 +608,17 @@
         tabMarket.classList.toggle("on", state.cmcActiveTab === "market");
         tabCoin.classList.toggle("on", state.cmcActiveTab === "coin");
 
+        renderWorkspaceTabs();
         renderQuick();
         renderToggles();
       }
 
+      btnAddTab.onclick = () => window.hub.createTab();
       document.getElementById("go").onclick = applySymbol;
       sym.addEventListener("keydown", (e) => {
         if (e.key === "Enter") applySymbol();
       });
+
       toggleLeft.onclick = () => window.hub.toggleLeft();
       toggleRight.onclick = () => window.hub.toggleRight();
       document.getElementById("toggleAi").onclick = () => window.hub.toggleAi();

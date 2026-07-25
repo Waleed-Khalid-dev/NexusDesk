@@ -24,4 +24,9 @@ contextBridge.exposeInMainWorld("hub", {
     return () => ipcRenderer.removeListener("symbol-changed", handler);
   },
   openMarketIntel: () => ipcRenderer.send("open-market-intel"),
+  createTab: (payload) => ipcRenderer.send("create-tab", payload),
+  switchTab: (tabId) => ipcRenderer.send("switch-tab", tabId),
+  closeTab: (tabId) => ipcRenderer.send("close-tab", tabId),
+  renameTab: (payload) => ipcRenderer.send("rename-tab", payload),
 });
+
