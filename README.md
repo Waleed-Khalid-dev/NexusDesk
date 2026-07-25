@@ -52,6 +52,13 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ---
 
+## Documentation
+
+- ðŸ“ **[System Architecture Documentation](./docs/ARCHITECTURE.md)** -- Multi-pane Chromium layout, IPC protocols, database schema & security model.
+- ðŸ¤– **[LLM Index (llms.txt)](./llms.txt)** -- Machine-readable guide for AI assistants and RAG systems.
+
+---
+
 ## Bug Fixes
 
 - **TradingView Navigation Freeze** -- Fixed a bug where interacting with the TradingView chart panel (clicking an indicator) would silently block all subsequent coin searches. Root cause was TradingView's internal `beforeunload` handler blocking Electron `loadURL` calls. Fixed by adding a `will-prevent-unload` event override on the chart WebContents.
@@ -130,10 +137,12 @@ NexusDesk/
 |   +-- preload.cjs           Electron preload
 |   +-- splitter.html         Layout drag handle
 +-- docs/
+|   +-- ARCHITECTURE.md       Technical system architecture & IPC specs
 |   +-- dashboard.png         Dashboard screenshot
 +-- .gitignore
 +-- LICENSE
 +-- README.md
++-- llms.txt
 +-- package.json
 +-- start.bat
 ```
@@ -164,6 +173,7 @@ Based on current market conditions, which 3 coins would you pick today and why?
 
 | Version | Date | Change |
 |---|---|---|
+| 1.3.0 | 2026-07-25 | Docs: Added Architecture documentation & llms.txt index |
 | 1.2.0 | 2026-07-24 | Fix: TradingView panel navigation freeze (beforeunload override) |
 | 1.1.0 | 2026-07-22 | Feature: Smart Search Synchronization for CMC & Coinglass |
 | 1.0.0 | 2026-07-21 | Initial release |
