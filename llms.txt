@@ -2,14 +2,17 @@
 > Desktop Crypto Trading Command Center built with Electron, CCXT, Google Gemini AI, and Windows DPAPI.
 
 ## Core Files
-- [electron/main.cjs]: Main process, window layout manager, IPC event handlers, and safeStorage vault.
+- [electron/main.cjs]: Main process, workspace tab registry (`workspaceTabs`), window layout manager, IPC event handlers, and safeStorage vault.
+- [electron/control.html]: Top control header UI with glassmorphic Multi-Tab Workspace bar and omnibar search.
+- [electron/preload.cjs]: Exposes `hub` contextBridge APIs for tab management (`createTab`, `switchTab`, `closeTab`, `renameTab`).
 - [electron/market-intel.cjs]: Market intelligence engine, Squeeze Radar, CCXT integrations, and CMC slug resolver.
 - [electron/portfolio.cjs]: Local SQLite portfolio manager, trade execution engine, and safety cap validator.
 - [electron/market-intel-ui.html]: Proactive Squeeze Radar & Custom Watchlist UI.
 - [electron/ai-chat.html]: AI Co-Pilot interface integrated with live market context.
-- [docs/ARCHITECTURE.md]: System design, component layout, IPC documentation, and security model.
+- [docs/ARCHITECTURE.md]: System design, component layout, multi-tab IPC documentation, and security model.
 
 ## Key Concepts
 - WebContentsView Isolation: Each UI panel is a top-level Chromium WebContents, preventing iframe CORS/session restrictions.
+- Multi-Tab Workspace System: Monitor multiple coins simultaneously via control bar tabs; automatically persists to `%AppData%\NexusDesk\hub-settings.json`.
 - DPAPI Vault: Encrypted API key storage via Electron safeStorage.
 - Squeeze Radar: Background funding rate watcher triggering desktop alerts on extreme leverage imbalance.

@@ -6,7 +6,7 @@ NexusDesk is an Electron desktop application designed with multi-pane isolation 
 
 ```
 +-----------------------------------------------------------------------------------+
-|                            Top Control Bar (control.html)                         |
+|               Top Control Bar (control.html) & Multi-Tab Workspace                |
 +-------------------+-----------------------------------+---------------------------+
 | CryptoBubbles     | TradingView Chart                 | Coinglass Heatmap         |
 | (WebContentsView) | (WebContentsView)                 | (WebContentsView)         |
@@ -18,10 +18,12 @@ NexusDesk is an Electron desktop application designed with multi-pane isolation 
 
 ## Core Modules
 
-### 1. Electron Main Process (`electron/main.cjs`)
+### 1. Electron Main Process & Tab Registry (`electron/main.cjs`)
 - **Window & Layout Management:** Controls dynamic pane resizing, side panel collapsing, and split-screen bounds using Electron `WebContentsView`.
+- **Multi-Tab Workspace System:** Manages an array of workspace tabs (`workspaceTabs`) and `activeTabId`. Re-renders active trading pairs on tab switch without instantiating unnecessary `WebContentsView` processes.
+- **Persistence Engine:** Automatically serializes tab lists, custom labels, active tab selection, and layout percentages to `%AppData%\NexusDesk\hub-settings.json`.
 - **Security & Key Vault:** Encrypts API keys (Binance, Gemini AI, CoinMarketCap, LunarCrush) using Windows Data Protection API (`safeStorage` / DPAPI).
-- **Navigation & Event Overrides:** Intercepts `will-prevent-unload` events to ensure third-party embedded charts (like TradingView) do not block IPC navigation or coin search updates.
+- **Navigation & Event Overrides:** Intercepts `will-prevent-unload` events on TradingView `WebContents` to ensure chart interactions do not block coin search navigation.
 
 ### 2. Market Intelligence Engine (`electron/market-intel.cjs`)
 - **Extreme Squeeze Radar:** Background worker scanning global funding rates via CCXT. Triggers desktop notifications when threshold funding spikes occur (+/-0.5%).
@@ -36,9 +38,13 @@ NexusDesk is an Electron desktop application designed with multi-pane isolation 
 
 | Event | Direction | Payload / Action |
 |---|---|---|
-| `get-state` | Renderer -> Main | Requests full application state payload |
-| `set-symbol` | Renderer -> Main | `{ ticker, exchange }` -- updates active ticker across all panes |
-| `symbol-changed` | Main -> Renderer | Broadcasts updated ticker state to control bar and UI panels |
+| `get-state` | Renderer -> Main | Requests full application state payload (includes `workspaceTabs`, `activeTabId`) |
+| `set-symbol` | Renderer -> Main | `{ ticker, exchange }` -- updates active ticker across all panes and updates current tab |
+| `create-tab` | Renderer -> Main | `{ ticker?, exchange? }` -- creates new workspace tab and switches context |
+| `switch-tab` | Renderer -> Main | `tabId` -- switches active workspace tab and reloads all 4 panes |
+| `close-tab` | Renderer -> Main | `tabId` -- closes target workspace tab and focuses adjacent tab |
+| `rename-tab` | Renderer -> Main | `{ id, label }` -- updates display label of target workspace tab |
+| `symbol-changed` | Main -> Renderer | Broadcasts updated ticker state & tabs state to control bar and UI panels |
 | `cmc-tab` | Renderer -> Main | Switches CMC bottom panel tabs (`market`, `coin`) |
 | `execute-trade` | Renderer -> Main | Executes trade via CCXT after safety cap validation |
 
