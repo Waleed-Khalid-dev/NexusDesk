@@ -59,10 +59,11 @@ let leftPct = LEFT_PCT;
 let rightPct = RIGHT_PCT;
 let currentTicker = "BTC";
 let currentExchange = "BINANCE";
+let currentMarketType = "PERP";
 let executionMode = false;
 
 let workspaceTabs = [
-  { id: "tab-1", ticker: "BTC", exchange: "BINANCE", label: "BINANCE: BTC" }
+  { id: "tab-1", ticker: "BTC", exchange: "BINANCE", marketType: "PERP", label: "BINANCE: BTC" }
 ];
 let activeTabId = "tab-1";
 
@@ -172,12 +173,14 @@ function enforceCenterMin() {
   }
 }
 
-function tradingViewUrl(ticker, exchange) {
+function tradingViewUrl(ticker, exchange, marketType = currentMarketType) {
   const t = String(ticker || "BTC")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
   const ex = String(exchange || "BINANCE").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return `https://www.tradingview.com/chart/?symbol=${ex}:${t}USDT`;
+  const isPerpSupport = ["BINANCE", "BYBIT", "MEXC", "OKX", "BITGET", "KUCOIN"].includes(ex);
+  const suffix = (marketType === "PERP" && isPerpSupport) ? ".P" : "";
+  return `https://www.tradingview.com/chart/?symbol=${ex}:${t}USDT${suffix}`;
 }
 
 function coinGlassUrl(ticker, exchange) {
@@ -215,7 +218,8 @@ const CMC_SLUGS = {
   SUI: "sui",
   PEPE: "pepe",
   SHIB: "shiba-inu",
-  MATIC: "matic-network",
+  MATIC: "polygon-ecosystem-token",
+  POL: "polygon-ecosystem-token",
   UNI: "uniswap",
   LTC: "litecoin",
   BCH: "bitcoin-cash",
@@ -244,11 +248,361 @@ const CMC_SLUGS = {
   PYTH: "pyth-network",
   BONK: "bonk",
   WIF: "dogwifcoin",
+  ZEC: "zcash",
+  XMR: "monero",
+  VVV: "virtual-protocol",
+  KAS: "kaspa",
+  TAO: "bittensor",
+  RENDER: "render",
+  RNDR: "render",
+  GALA: "gala",
+  FLOKI: "floki",
+  AR: "arweave",
+  FET: "artificial-superintelligence-alliance",
+  GRASS: "grass",
+  RAY: "raydium",
+  ONDO: "ondo",
+  JASMY: "jasmy",
+  BRETT: "brett",
+  POPCAT: "popcat",
+  MEW: "cat-in-a-dogs-world",
+  NEIRO: "first-neiro-on-ethereum",
+  GOAT: "goatseus-maximus",
+  PNUT: "peanut-the-squirrel",
+  ACT: "act-i-the-ai-prophecy",
+  CHILLGUY: "just-a-chill-guy",
+  FARTCOIN: "fartcoin",
+  AI16Z: "ai16z",
+  ZEREBRO: "zerebro",
+  GRIFFAIN: "griffain",
+  VIRTUAL: "virtual-protocol",
+  SPX: "spx-6900",
+  TURBO: "turbo",
+  MEME: "memecoin",
+  MOG: "mog-coin",
+  BOME: "book-of-meme",
+  MYRO: "myro",
+  SLERF: "slerf",
+  PONKE: "ponke",
+  MOTHER: "mother-iggy",
+  DADDY: "daddy-tate",
+  GIGA: "gigachad",
+  MICHI: "michi",
+  SUNDOG: "sundog",
+  MOODENG: "moo-deng",
+  HIPPO: "sudeng",
+  LUCE: "luce",
+  PENGU: "pudgy-penguins",
+  ZETA: "zetachain",
+  STRK: "starknet",
+  ZK: "zksync",
+  BLAST: "blast",
+  ENA: "ethena",
+  SAGA: "saga",
+  TNSR: "tensor",
+  DRIFT: "drift-protocol",
+  IO: "io-net",
+  ZRO: "layerzero",
+  LISTA: "lista-dao",
+  REZ: "renzo",
+  SAFE: "safe",
+  BANANA: "banana-gun",
+  DOGS: "dogs",
+  NOT: "notcoin",
+  HMSTR: "hamster-kombat",
+  CATI: "catizen",
+  MAJOR: "major",
+  XEN: "xen-crypto",
+  ORDI: "ordi",
+  SATS: "sats-ordinals",
+  RATS: "rats-ordinals",
+  STX: "stacks",
+  TIA: "celestia",
+  DYM: "dymension",
+  ALT: "altlayer",
+  MANTA: "manta-network",
+  PIXEL: "pixels",
+  PORTAL: "portal",
+  MAV: "maverick-protocol",
+  PENDLE: "pendle",
+  BLUR: "blur",
+  GMX: "gmx",
+  DYDX: "dydx",
+  ENS: "ethereum-name-service",
+  LDO: "lido-dao",
+  RPL: "rocket-pool",
+  FXS: "frax-share",
+  CHZ: "chiliz",
+  SAND: "the-sandbox",
+  MANA: "decentraland",
+  AXS: "axie-infinity",
+  ILV: "illuvium",
+  SUPER: "superverse",
+  ALICE: "my-neighbor-alice",
+  YGG: "yield-guild-games",
+  CFX: "conflux-network",
+  KLAY: "klaytn",
+  THETA: "theta-network",
+  EGLD: "multiversx",
+  FLOW: "flow",
+  MINA: "mina",
+  KAVA: "kava",
+  XLM: "stellar",
+  ALGO: "algorand",
+  EOS: "eos",
+  XTZ: "tezos",
+  NEO: "neo",
+  IOTA: "iota",
+  DASH: "dash",
+  ZIL: "zilliqa",
+  BAT: "basic-attention-token",
+  ZRX: "0x",
+  COMP: "compound",
+  KSM: "kusama",
+  WAVES: "waves",
+  QTUM: "qtum",
+  ONT: "ontology",
+  ENJ: "enjin-coin",
+  HOT: "holo",
+  RVN: "ravencoin",
+  SC: "siacoin",
+  CELO: "celo",
+  SCRT: "secret",
+  ONE: "harmony",
+  ROSE: "oasis-network",
+  SKL: "skale-network",
+  AUDIO: "audius",
+  MASK: "mask-network",
+  LPT: "livepeer",
+  BAND: "band-protocol",
+  RLC: "iexec-rlc",
+  COTI: "coti",
+  STORJ: "storj",
+  ANKR: "ankr",
+  GTC: "gitcoin",
+  PEOPLE: "constitutiondao",
+  SPELL: "spell-token",
+  ACH: "alchemy-pay",
+  TRB: "tellor",
+  UMA: "uma",
+  NMR: "numeraire",
+  OCEAN: "ocean-protocol",
+  AGIX: "singularitynet",
+  SSV: "ssv-network",
+  LRC: "loopring",
+  "1INCH": "1inch",
+  BAL: "balancer",
+  SUSHI: "sushiswap",
+  KNC: "kyber-network-crystal-v2",
+  // Top Layer 1s, Layer 2s & Ecosystem Infrastructure
+  OMNI: "omni-network",
+  W: "wormhole",
+  ATH: "aethir",
+  AIOZ: "aioz-network",
+  AKT: "akash-network",
+  GLM: "golem-network-tokens",
+  POKT: "pocket-network",
+  CUDOS: "cudos",
+  ALPH: "alephium",
+  CLORE: "clore-ai",
+  DIMO: "dimo",
+  HONEY: "hivemapper",
+  MOBILE: "helium-mobile",
+  IOTX: "iotex",
+  DATA: "streamr",
+  RSS3: "rss3",
+  NKN: "nkn",
+  SIA: "siacoin",
+  BTT: "bittorrent-new",
+  SHDW: "shadow-token",
+  BLZ: "bluzelle",
+  PHB: "phoenix-global",
+  MDT: "measurable-data-token",
+  ALI: "artificial-liquid-intelligence",
+  PAAL: "paal-ai",
+  CGPT: "chaingpt",
+  OLAS: "autonolas",
+  SPEC: "spectral",
+  ARKM: "arkham",
+  RON: "ronin",
+  RONIN: "ronin",
+  BEAM: "beam",
+  XAI: "xai-blockchain",
+  MAVIA: "heroes-of-mavia",
+  SHRAP: "shrapnel",
+  NAKA: "nakamoto-games",
+  PYR: "vulcan-forged",
+  GODS: "gods-unchained",
+  WILD: "wilder-world",
+  POLIS: "star-atlas-polis",
+  ATLAS: "star-atlas",
+  ALIEN: "alien-worlds",
+  DAR: "mines-of-dalarnia",
+  VOXEL: "voxies",
+  HIGH: "highstreet",
+  MAGIC: "magic",
+  GF: "guild-fi",
+  LOKA: "league-of-kingdoms-arena",
+  DERC: "derace",
+  MC: "merit-circle",
+  MERIT: "merit-circle",
+  CROWN: "photo-finish-live",
+  CARV: "carv",
+  KARRAT: "karrat",
+  RACA: "radio-caca",
+  HERO: "metahero",
+  DFL: "defi-land",
+  UFO: "ufo-gaming",
+  SFUND: "seedify-fund",
+  BLOK: "bloktopia",
+  VRA: "verasity",
+  CGG: "chain-guardians",
+  SIDUS: "sidus",
+  FARA: "faraland",
+  REVO: "revomon",
+  // Meme & Community Trending
+  WEN: "wen-sol",
+  COQ: "coq-inu",
+  TOSHI: "toshi",
+  DEGEN: "degen-base",
+  HIGHER: "higher",
+  KEYCAT: "keyboard-cat",
+  PURPE: "purpe",
+  BENJI: "basenji",
+  MANEKI: "maneki",
+  WOLF: "landwolf",
+  TRUMP: "official-trump",
+  MAGA: "maga",
+  TREMP: "doland-tremp",
+  BODEN: "jeo-boden",
+  PAC: "pac-man",
+  NICK: "nick",
+  MIGO: "migo",
+  FOXY: "foxy",
+  SMOG: "smog",
+  DOG: "dog-go-to-the-moon",
+  BABYDOGE: "baby-doge-coin",
+  CORGI: "corgiai",
+  CHEEMS: "cheems",
+  SAMO: "samoyedcoin",
+  ELON: "dogelon-mars",
+  KISHU: "kishu-inu",
+  AKITA: "akita-inu",
+  PIT: "pitbull",
+  TSUKA: "dejitaru-tsuka",
+  PAW: "pawswap",
+  AIDOGE: "arbinu",
+  WOJAK: "wojak",
+  LADYS: "milady-meme-coin",
+  BOB: "bob-token",
+  MONA: "monacoin",
+  TURBOS: "turbos-finance",
+  ANDY: "andy-eth",
+  LANDWOLF: "landwolf-eth",
+  BOBO: "bobo",
+  RETARDIO: "retardio",
+  HARAMBE: "harambe-on-solana",
+  MINIDOGE: "minidoge",
+  POOH: "pooh",
+  REKT: "rekt",
+  WHY: "why",
+  MURAL: "mural",
+  BILLY: "billy",
+  LOCKIN: "lock-in",
+  BERT: "bert",
+  PUPS: "pups-ordinals",
+  RSIC: "rsic-genesis-meta-protocol",
+  GZIL: "governance-zil",
+  // DeFi, Liquid Staking & Yield
+  USDE: "ethena-usde",
+  ETHFI: "ether-fi",
+  BVM: "bvm",
+  EIGEN: "eigenlayer",
+  PUFFER: "puffer",
+  SWELL: "swell-network",
+  PRIME: "echelon-prime",
+  ORCA: "orca",
+  COW: "cow-protocol",
+  GNS: "gains-network",
+  PERP: "perpetual-protocol",
+  GAINS: "gains-network",
+  CYBER: "cyberconnect",
+  HOOK: "hooked-protocol",
+  EDU: "open-campus",
+  COMBO: "combo",
+  ID: "space-id",
+  SPACE: "space-id",
+  MOCA: "mocaverse",
+  AERO: "aerodrome-finance",
+  VELO: "velodrome-finance",
+  JOE: "joe",
+  QUICK: "quickswap",
+  TRADER: "joe",
+  EQU: "equalizer-dex",
+  RADAR: "dappradar",
+  SPECTRA: "spectra",
+  MORPHO: "morpho",
+  ZIRCUIT: "zircuit",
+  // Exchange Tokens & Privacy/Classic
+  ZEN: "horizen",
+  ARRR: "pirate-chain",
+  NYM: "nym",
+  DERO: "dero",
+  BEAMX: "beam",
+  FIRO: "firo",
+  XVG: "verge",
+  KMD: "komodo",
+  NAV: "nav-coin",
+  PIVX: "pivx",
+  OXEN: "oxen",
+  MONERO: "monero",
+  ZCASH: "zcash",
+  NEXA: "nexa",
+  DNX: "dynex",
+  RXD: "radiant",
+  SYS: "syscoin",
+  ERG: "ergo",
+  KCS: "kucoin-token",
+  OKB: "okb",
+  BGB: "bitget-token",
+  GT: "gatetoken",
+  HTX: "htx-token",
+  WOO: "network-woo",
+  LEO: "unus-sed-leo",
+  CRO: "cronos",
+  FTT: "ftx-token",
+  MX: "mx-token",
+  TEL: "telcoin",
+  DGB: "digibyte",
+  XEC: "ecash",
+  NFT: "apenft",
+  WIN: "winklink",
+  VTHO: "vechain-thor-energy",
+  GAS: "gas",
+  ONG: "ontology-gas",
+  NEBL: "neblio",
+  STRAX: "stratis",
+  XPR: "xpr-network",
+  XCH: "chia-network",
+  WAN: "wanchain",
+  REEF: "reef",
+  POA: "poa-network",
+  GO: "gochain",
+  ELA: "elastos",
+  BTS: "bitshares",
+  STEEM: "steem",
+  HIVE: "hive-blockchain",
+  SBD: "steem-dollars",
+  LBC: "library-credit",
+  ETN: "electroneum",
+  "0G": "0g",
+  "0X": "0x",
+  "404": "erc404"
 };
 
 function cmcSlug(ticker) {
   const t = String(ticker || "BTC").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return CMC_SLUGS[t] || t.toLowerCase();
+  return CMC_SLUGS[t] || null;
 }
 
 function cmcChartsUrl() {
@@ -256,11 +610,15 @@ function cmcChartsUrl() {
 }
 
 function cmcCoinUrl(ticker) {
-  return `https://coinmarketcap.com/currencies/${cmcSlug(ticker)}/`;
+  const t = String(ticker || "BTC").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (CMC_SLUGS[t]) {
+    return `https://coinmarketcap.com/currencies/${CMC_SLUGS[t]}/`;
+  }
+  return `https://coinmarketcap.com/search/?query=${encodeURIComponent(t)}`;
 }
 
 function createPaneView() {
-  return new WebContentsView({
+  const view = new WebContentsView({
     webPreferences: {
       partition: "persist:crypto-hub",
       contextIsolation: true,
@@ -269,9 +627,16 @@ function createPaneView() {
       spellcheck: false,
     },
   });
+  view.setBackgroundColor('#131722');
+  view.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (isMainFrame && errorCode !== -3) {
+      console.error(`Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
+    }
+  });
+  return view;
 }
 
-function buildTabPanes(tabId, ticker, exchange) {
+function buildTabPanes(tabId, ticker, exchange, marketType = currentMarketType) {
   const chartView = createPaneView();
   const heatmapView = createPaneView();
   const cmcView = createPaneView();
@@ -295,7 +660,7 @@ function buildTabPanes(tabId, ticker, exchange) {
     });
   }
 
-  chartView.webContents.loadURL(tradingViewUrl(ticker, exchange));
+  chartView.webContents.loadURL(tradingViewUrl(ticker, exchange, marketType));
   heatmapView.webContents.loadURL(coinGlassUrl(ticker, exchange));
   cmcView.webContents.loadURL(cmcChartsUrl());
 
@@ -367,6 +732,7 @@ function createSplitterView(side) {
       sandbox: false,
     },
   });
+  view.setBackgroundColor('#131722');
   view.webContents.loadFile(path.join(__dirname, "splitter.html"), {
     query: { side },
   });
@@ -488,6 +854,7 @@ function statePayload() {
   return {
     ticker: currentTicker,
     exchange: currentExchange,
+    marketType: currentMarketType,
     leftCollapsed,
     rightCollapsed,
     cmcPanelOpen,
@@ -510,13 +877,15 @@ function broadcastState() {
 }
 
 function setSymbol(payload, { reload = true } = {}) {
-  let ticker, exchange;
+  let ticker, exchange, marketType;
   if (typeof payload === "object" && payload !== null) {
     ticker = payload.ticker;
     exchange = payload.exchange;
+    marketType = payload.marketType;
   } else {
     ticker = payload;
     exchange = currentExchange;
+    marketType = currentMarketType;
   }
 
   const t = String(ticker || "BTC")
@@ -525,9 +894,11 @@ function setSymbol(payload, { reload = true } = {}) {
   const ex = String(exchange || "BINANCE")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "") || "BINANCE";
+  const mt = (marketType === "SPOT" || marketType === "PERP") ? marketType : currentMarketType;
 
   currentTicker = t;
   currentExchange = ex;
+  currentMarketType = mt;
 
   // Keep active tab updated
   const currTab = workspaceTabs.find(tab => tab.id === activeTabId);
@@ -535,11 +906,11 @@ function setSymbol(payload, { reload = true } = {}) {
     const isCustomLabel = currTab.label && !currTab.label.includes(":");
     currTab.ticker = t;
     currTab.exchange = ex;
+    currTab.marketType = mt;
     if (!isCustomLabel) {
       currTab.label = `${ex}: ${t}`;
     }
   }
-
 
   if (reload) {
     const activePanes = getActiveTabPanes();
@@ -547,18 +918,33 @@ function setSymbol(payload, { reload = true } = {}) {
     const heatmapView = activePanes ? activePanes.heatmapView : null;
     const cmcView = activePanes ? activePanes.cmcView : null;
 
-    if (chartView) chartView.webContents.loadURL(tradingViewUrl(t, ex));
+    const targetTvUrl = tradingViewUrl(t, ex, mt);
+    if (chartView && chartView.webContents.getURL() !== targetTvUrl) {
+      chartView.webContents.loadURL(targetTvUrl);
+    }
 
-    if (heatmapView) heatmapView.webContents.loadURL(coinGlassUrl(t, ex));
-    // Auto-navigate CMC when symbol changes using dynamic slug resolution
-    if (cmcView && cmcActiveTab === "coin") {
+    const targetCgUrl = coinGlassUrl(t, ex);
+    if (heatmapView && heatmapView.webContents.getURL() !== targetCgUrl) {
+      heatmapView.webContents.loadURL(targetCgUrl);
+    }
+
+    // Always prime CMC when symbol changes so switching to Coin tab never hits a 404
+    if (cmcView) {
       const keys = loadKeys();
       const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
       marketIntel.fetchCMCCoin(t, cmcKey).then(data => {
         const resolvedSlug = data && data.slug ? data.slug : cmcSlug(t);
-        cmcView.webContents.loadURL(`https://coinmarketcap.com/currencies/${resolvedSlug}/`);
+        const targetCmcUrl = resolvedSlug 
+          ? `https://coinmarketcap.com/currencies/${resolvedSlug}/`
+          : cmcCoinUrl(t);
+        if (cmcActiveTab === "coin" && cmcView.webContents.getURL() !== targetCmcUrl) {
+          cmcView.webContents.loadURL(targetCmcUrl);
+        }
       }).catch(() => {
-        cmcView.webContents.loadURL(cmcCoinUrl(t));
+        const targetCmcUrl = cmcCoinUrl(t);
+        if (cmcActiveTab === "coin" && cmcView.webContents.getURL() !== targetCmcUrl) {
+          cmcView.webContents.loadURL(targetCmcUrl);
+        }
       });
     }
   }
@@ -704,19 +1090,21 @@ ipcMain.on("create-tab", (_e, payload) => {
   const newId = `tab-${Date.now()}`;
   const t = (payload && payload.ticker) ? String(payload.ticker).toUpperCase().replace(/[^A-Z0-9]/g, "") : currentTicker;
   const ex = (payload && payload.exchange) ? String(payload.exchange).toUpperCase().replace(/[^A-Z0-9]/g, "") : currentExchange;
+  const mt = (payload && payload.marketType) ? payload.marketType : currentMarketType;
   const newTab = {
     id: newId,
     ticker: t,
     exchange: ex,
+    marketType: mt,
     label: `${ex}: ${t}`
   };
   
   detachTabPanes(activeTabId);
   workspaceTabs.push(newTab);
   activeTabId = newId;
-  setSymbol({ ticker: t, exchange: ex }, { reload: false });
+  setSymbol({ ticker: t, exchange: ex, marketType: mt }, { reload: false });
 
-  buildTabPanes(newId, t, ex);
+  buildTabPanes(newId, t, ex, mt);
   attachTabPanes(newId);
   layout();
   saveSettings();
@@ -730,10 +1118,10 @@ ipcMain.on("switch-tab", (_e, tabId) => {
 
   detachTabPanes(activeTabId);
   activeTabId = tabId;
-  setSymbol({ ticker: target.ticker, exchange: target.exchange }, { reload: false });
+  setSymbol({ ticker: target.ticker, exchange: target.exchange, marketType: target.marketType || "PERP" }, { reload: false });
 
   if (!tabPanes.has(tabId)) {
-    buildTabPanes(tabId, target.ticker, target.exchange);
+    buildTabPanes(tabId, target.ticker, target.exchange, target.marketType || "PERP");
   }
   attachTabPanes(tabId);
   layout();
@@ -753,10 +1141,10 @@ ipcMain.on("close-tab", (_e, tabId) => {
     detachTabPanes(tabId);
     const nextTab = workspaceTabs[Math.max(0, idx - 1)];
     activeTabId = nextTab.id;
-    setSymbol({ ticker: nextTab.ticker, exchange: nextTab.exchange }, { reload: false });
+    setSymbol({ ticker: nextTab.ticker, exchange: nextTab.exchange, marketType: nextTab.marketType || "PERP" }, { reload: false });
 
     if (!tabPanes.has(activeTabId)) {
-      buildTabPanes(activeTabId, nextTab.ticker, nextTab.exchange);
+      buildTabPanes(activeTabId, nextTab.ticker, nextTab.exchange, nextTab.marketType || "PERP");
     }
     attachTabPanes(activeTabId);
     layout();
@@ -909,7 +1297,7 @@ ipcMain.on("navigate-pane", (_e, pane) => {
   const activePanes = getActiveTabPanes();
   if (!activePanes) return;
   if (pane === "chart" && activePanes.chartView) {
-    activePanes.chartView.webContents.loadURL(tradingViewUrl(currentTicker, currentExchange));
+    activePanes.chartView.webContents.loadURL(tradingViewUrl(currentTicker, currentExchange, currentMarketType));
   }
   if (pane === "heatmap" && activePanes.heatmapView) {
     activePanes.heatmapView.webContents.loadURL(coinGlassUrl(currentTicker, currentExchange));
@@ -937,7 +1325,11 @@ ipcMain.on("cmc-tab", (_e, tab) => {
     const cmcKey = keys["cmc"] ? safeStorage.decryptString(Buffer.from(keys["cmc"].key, "base64")) : null;
     marketIntel.fetchCMCCoin(currentTicker, cmcKey).then(data => {
       const resolvedSlug = data && data.slug ? data.slug : cmcSlug(currentTicker);
-      cmcView.webContents.loadURL(`https://coinmarketcap.com/currencies/${resolvedSlug}/`);
+      if (resolvedSlug) {
+        cmcView.webContents.loadURL(`https://coinmarketcap.com/currencies/${resolvedSlug}/`);
+      } else {
+        cmcView.webContents.loadURL(cmcCoinUrl(currentTicker));
+      }
     }).catch(() => {
       cmcView.webContents.loadURL(cmcCoinUrl(currentTicker));
     });

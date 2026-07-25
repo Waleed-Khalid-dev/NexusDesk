@@ -427,6 +427,10 @@
             <option value="KUCOIN">KUCOIN</option>
             <option value="BITGET">BITGET</option>
           </select>
+          <select id="marketType" title="Market Type (Spot vs Perpetual Futures)">
+            <option value="PERP">⚡ PERP (.P)</option>
+            <option value="SPOT">🔘 SPOT</option>
+          </select>
           <input id="sym" spellcheck="false" autocomplete="off" placeholder="BTC" value="BTC" />
           <svg class="search-icon" id="go" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
@@ -507,6 +511,7 @@
       let state = {
         ticker: "BTC",
         exchange: "BINANCE",
+        marketType: "PERP",
         leftCollapsed: false,
         rightCollapsed: false,
         cmcPanelOpen: false,
@@ -519,7 +524,8 @@
       function applySymbol() {
         const t = (sym.value || "BTC").trim().toUpperCase();
         const e = exchange.value;
-        window.hub.setSymbol({ ticker: t, exchange: e });
+        const mt = document.getElementById("marketType").value;
+        window.hub.setSymbol({ ticker: t, exchange: e, marketType: mt });
       }
 
       function renderQuick() {
@@ -598,6 +604,8 @@
         tabCoinLabel.textContent = state.ticker;
         if (document.activeElement !== sym) sym.value = state.ticker;
         if (state.exchange && exchange.value !== state.exchange) exchange.value = state.exchange;
+        const mtEl = document.getElementById("marketType");
+        if (mtEl && state.marketType && mtEl.value !== state.marketType) mtEl.value = state.marketType;
 
         // CMC panel open/closed styling
         cmcToggleBtn.classList.toggle("active", !!state.cmcPanelOpen);
@@ -615,6 +623,8 @@
 
       btnAddTab.onclick = () => window.hub.createTab();
       document.getElementById("go").onclick = applySymbol;
+      exchange.onchange = applySymbol;
+      document.getElementById("marketType").onchange = applySymbol;
       sym.addEventListener("keydown", (e) => {
         if (e.key === "Enter") applySymbol();
       });
