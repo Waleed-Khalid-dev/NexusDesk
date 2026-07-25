@@ -54,8 +54,8 @@ The AI Co-Pilot knows your live portfolio balance, Fear & Greed Index, Altcoin S
 
 ## Documentation
 
-- ðŸ“ **[System Architecture Documentation](./docs/ARCHITECTURE.md)** -- Multi-pane Chromium layout, IPC protocols, database schema & security model.
-- ðŸ¤– **[LLM Index (llms.txt)](./llms.txt)** -- Machine-readable guide for AI assistants and RAG systems.
+- **[System Architecture Documentation](./docs/ARCHITECTURE.md)** -- Multi-pane Chromium layout, IPC protocols, database schema & security model.
+- **[LLM Index (llms.txt)](./llms.txt)** -- Machine-readable guide for AI assistants and RAG systems.
 
 ---
 
