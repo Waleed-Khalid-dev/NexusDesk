@@ -670,55 +670,63 @@ function buildTabPanes(tabId, ticker, exchange, marketType = currentMarketType) 
 }
 
 function attachTabPanes(tabId) {
-  if (!mainWindow || !mainWindow.contentView) return;
-  const panes = tabPanes.get(tabId);
-  if (!panes) return;
+  try {
+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.contentView) return;
+    const panes = tabPanes.get(tabId);
+    if (!panes) return;
 
-  mainWindow.contentView.addChildView(panes.chartView);
-  mainWindow.contentView.addChildView(panes.heatmapView);
-  mainWindow.contentView.addChildView(panes.cmcView);
+    try { if (!panes.chartView.webContents.isDestroyed()) mainWindow.contentView.addChildView(panes.chartView); } catch (e) {}
+    try { if (!panes.heatmapView.webContents.isDestroyed()) mainWindow.contentView.addChildView(panes.heatmapView); } catch (e) {}
+    try { if (!panes.cmcView.webContents.isDestroyed()) mainWindow.contentView.addChildView(panes.cmcView); } catch (e) {}
 
-  // Ensure splitters and top overlays stay on top of the newly added panes!
-  if (aiView) {
-    try { mainWindow.contentView.removeChildView(aiView); } catch (e) {}
-    mainWindow.contentView.addChildView(aiView);
-  }
-  if (leftSplit) {
-    try { mainWindow.contentView.removeChildView(leftSplit); } catch (e) {}
-    mainWindow.contentView.addChildView(leftSplit);
-  }
-  if (rightSplit) {
-    try { mainWindow.contentView.removeChildView(rightSplit); } catch (e) {}
-    mainWindow.contentView.addChildView(rightSplit);
-  }
-  if (cmcSplit) {
-    try { mainWindow.contentView.removeChildView(cmcSplit); } catch (e) {}
-    mainWindow.contentView.addChildView(cmcSplit);
-  }
+    // Ensure splitters and top overlays stay on top of the newly added panes!
+    if (aiView && !aiView.webContents.isDestroyed()) {
+      try { mainWindow.contentView.removeChildView(aiView); } catch (e) {}
+      try { mainWindow.contentView.addChildView(aiView); } catch (e) {}
+    }
+    if (leftSplit && !leftSplit.webContents.isDestroyed()) {
+      try { mainWindow.contentView.removeChildView(leftSplit); } catch (e) {}
+      try { mainWindow.contentView.addChildView(leftSplit); } catch (e) {}
+    }
+    if (rightSplit && !rightSplit.webContents.isDestroyed()) {
+      try { mainWindow.contentView.removeChildView(rightSplit); } catch (e) {}
+      try { mainWindow.contentView.addChildView(rightSplit); } catch (e) {}
+    }
+    if (cmcSplit && !cmcSplit.webContents.isDestroyed()) {
+      try { mainWindow.contentView.removeChildView(cmcSplit); } catch (e) {}
+      try { mainWindow.contentView.addChildView(cmcSplit); } catch (e) {}
+    }
+  } catch (e) {}
 }
 
 function detachTabPanes(tabId) {
-  if (!mainWindow || !mainWindow.contentView) return;
-  const panes = tabPanes.get(tabId);
-  if (!panes) return;
-  try { mainWindow.contentView.removeChildView(panes.chartView); } catch (e) {}
-  try { mainWindow.contentView.removeChildView(panes.heatmapView); } catch (e) {}
-  try { mainWindow.contentView.removeChildView(panes.cmcView); } catch (e) {}
+  try {
+    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.contentView) return;
+    const panes = tabPanes.get(tabId);
+    if (!panes) return;
+    try { if (!panes.chartView.webContents.isDestroyed()) mainWindow.contentView.removeChildView(panes.chartView); } catch (e) {}
+    try { if (!panes.heatmapView.webContents.isDestroyed()) mainWindow.contentView.removeChildView(panes.heatmapView); } catch (e) {}
+    try { if (!panes.cmcView.webContents.isDestroyed()) mainWindow.contentView.removeChildView(panes.cmcView); } catch (e) {}
+  } catch (e) {}
 }
 
 function destroyTabPanes(tabId) {
-  detachTabPanes(tabId);
+  try {
+    detachTabPanes(tabId);
+  } catch (e) {}
   const panes = tabPanes.get(tabId);
   if (!panes) return;
-  try { panes.chartView.webContents.close(); } catch (e) {}
-  try { panes.heatmapView.webContents.close(); } catch (e) {}
-  try { panes.cmcView.webContents.close(); } catch (e) {}
+  try { if (!panes.chartView.webContents.isDestroyed()) panes.chartView.webContents.close(); } catch (e) {}
+  try { if (!panes.heatmapView.webContents.isDestroyed()) panes.heatmapView.webContents.close(); } catch (e) {}
+  try { if (!panes.cmcView.webContents.isDestroyed()) panes.cmcView.webContents.close(); } catch (e) {}
   tabPanes.delete(tabId);
 }
 
 function destroyAllTabPanes() {
-  for (const tabId of tabPanes.keys()) {
-    destroyTabPanes(tabId);
+  for (const tabId of Array.from(tabPanes.keys())) {
+    try {
+      destroyTabPanes(tabId);
+    } catch (e) {}
   }
 }
 
@@ -740,12 +748,13 @@ function createSplitterView(side) {
 }
 
 function layout() {
-  if (!mainWindow) return;
-  const { width, height } = mainWindow.getContentBounds();
-  const activePanes = getActiveTabPanes();
-  const chartView = activePanes ? activePanes.chartView : null;
-  const heatmapView = activePanes ? activePanes.heatmapView : null;
-  const cmcView = activePanes ? activePanes.cmcView : null;
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const { width, height } = mainWindow.getContentBounds();
+    const activePanes = getActiveTabPanes();
+    const chartView = activePanes ? activePanes.chartView : null;
+    const heatmapView = activePanes ? activePanes.heatmapView : null;
+    const cmcView = activePanes ? activePanes.cmcView : null;
 
 
   // Reserve bottom space for CMC panel when open
@@ -848,6 +857,7 @@ function layout() {
       aiView.setBounds({ x: width, y: TOP_H, width: 0, height: bodyH });
     }
   }
+  } catch (e) {}
 }
 
 function statePayload() {
