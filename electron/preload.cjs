@@ -28,5 +28,11 @@ contextBridge.exposeInMainWorld("hub", {
   switchTab: (tabId) => ipcRenderer.send("switch-tab", tabId),
   closeTab: (tabId) => ipcRenderer.send("close-tab", tabId),
   renameTab: (payload) => ipcRenderer.send("rename-tab", payload),
+  onTabLimitReached: (cb) => {
+    const handler = (_e, data) => cb(data);
+    ipcRenderer.on("tab-limit-reached", handler);
+    return () => ipcRenderer.removeListener("tab-limit-reached", handler);
+  },
 });
+
 

@@ -32,12 +32,13 @@ let mainWindow = null;
 let controlView = null;
 /** @type {WebContentsView | null} */
 let bubblesView = null;
-/** @type {WebContentsView | null} */
-let chartView = null;
-/** @type {WebContentsView | null} */
-let heatmapView = null;
-/** @type {WebContentsView | null} */
-let cmcView = null;
+/** @type {Map<string, { chartView: WebContentsView, heatmapView: WebContentsView, cmcView: WebContentsView }>} */
+const tabPanes = new Map();
+
+function getActiveTabPanes() {
+  return tabPanes.get(activeTabId) || null;
+}
+
 /** @type {WebContentsView | null} */
 let aiView = null;
 /** @type {WebContentsView | null} */
@@ -270,6 +271,93 @@ function createPaneView() {
   });
 }
 
+function buildTabPanes(tabId, ticker, exchange) {
+  const chartView = createPaneView();
+  const heatmapView = createPaneView();
+  const cmcView = createPaneView();
+
+  for (const view of [chartView, heatmapView, cmcView]) {
+    view.webContents.setWindowOpenHandler(() => ({
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        width: 520,
+        height: 720,
+        autoHideMenuBar: true,
+        webPreferences: {
+          partition: "persist:crypto-hub",
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+      },
+    }));
+    view.webContents.on('will-prevent-unload', (event) => {
+      event.preventDefault();
+    });
+  }
+
+  chartView.webContents.loadURL(tradingViewUrl(ticker, exchange));
+  heatmapView.webContents.loadURL(coinGlassUrl(ticker, exchange));
+  cmcView.webContents.loadURL(cmcChartsUrl());
+
+  const panes = { chartView, heatmapView, cmcView };
+  tabPanes.set(tabId, panes);
+  return panes;
+}
+
+function attachTabPanes(tabId) {
+  if (!mainWindow || !mainWindow.contentView) return;
+  const panes = tabPanes.get(tabId);
+  if (!panes) return;
+
+  mainWindow.contentView.addChildView(panes.chartView);
+  mainWindow.contentView.addChildView(panes.heatmapView);
+  mainWindow.contentView.addChildView(panes.cmcView);
+
+  // Ensure splitters and top overlays stay on top of the newly added panes!
+  if (aiView) {
+    try { mainWindow.contentView.removeChildView(aiView); } catch (e) {}
+    mainWindow.contentView.addChildView(aiView);
+  }
+  if (leftSplit) {
+    try { mainWindow.contentView.removeChildView(leftSplit); } catch (e) {}
+    mainWindow.contentView.addChildView(leftSplit);
+  }
+  if (rightSplit) {
+    try { mainWindow.contentView.removeChildView(rightSplit); } catch (e) {}
+    mainWindow.contentView.addChildView(rightSplit);
+  }
+  if (cmcSplit) {
+    try { mainWindow.contentView.removeChildView(cmcSplit); } catch (e) {}
+    mainWindow.contentView.addChildView(cmcSplit);
+  }
+}
+
+function detachTabPanes(tabId) {
+  if (!mainWindow || !mainWindow.contentView) return;
+  const panes = tabPanes.get(tabId);
+  if (!panes) return;
+  try { mainWindow.contentView.removeChildView(panes.chartView); } catch (e) {}
+  try { mainWindow.contentView.removeChildView(panes.heatmapView); } catch (e) {}
+  try { mainWindow.contentView.removeChildView(panes.cmcView); } catch (e) {}
+}
+
+function destroyTabPanes(tabId) {
+  detachTabPanes(tabId);
+  const panes = tabPanes.get(tabId);
+  if (!panes) return;
+  try { panes.chartView.webContents.close(); } catch (e) {}
+  try { panes.heatmapView.webContents.close(); } catch (e) {}
+  try { panes.cmcView.webContents.close(); } catch (e) {}
+  tabPanes.delete(tabId);
+}
+
+function destroyAllTabPanes() {
+  for (const tabId of tabPanes.keys()) {
+    destroyTabPanes(tabId);
+  }
+}
+
+
 function createSplitterView(side) {
   const view = new WebContentsView({
     webPreferences: {
@@ -288,6 +376,11 @@ function createSplitterView(side) {
 function layout() {
   if (!mainWindow) return;
   const { width, height } = mainWindow.getContentBounds();
+  const activePanes = getActiveTabPanes();
+  const chartView = activePanes ? activePanes.chartView : null;
+  const heatmapView = activePanes ? activePanes.heatmapView : null;
+  const cmcView = activePanes ? activePanes.cmcView : null;
+
 
   // Reserve bottom space for CMC panel when open
   const panelH = cmcPanelOpen ? cmcHeight : 0;
@@ -449,7 +542,13 @@ function setSymbol(payload, { reload = true } = {}) {
 
 
   if (reload) {
+    const activePanes = getActiveTabPanes();
+    const chartView = activePanes ? activePanes.chartView : null;
+    const heatmapView = activePanes ? activePanes.heatmapView : null;
+    const cmcView = activePanes ? activePanes.cmcView : null;
+
     if (chartView) chartView.webContents.loadURL(tradingViewUrl(t, ex));
+
     if (heatmapView) heatmapView.webContents.loadURL(coinGlassUrl(t, ex));
     // Auto-navigate CMC when symbol changes using dynamic slug resolution
     if (cmcView && cmcActiveTab === "coin") {
@@ -492,9 +591,6 @@ function createWindow() {
   controlView.webContents.loadFile(path.join(__dirname, "control.html"));
 
   bubblesView = createPaneView();
-  chartView = createPaneView();
-  heatmapView = createPaneView();
-  cmcView = createPaneView();
   
   aiView = new WebContentsView({
     webPreferences: {
@@ -508,7 +604,7 @@ function createWindow() {
   rightSplit = createSplitterView("right");
   cmcSplit = createSplitterView("bottom");
 
-  for (const view of [bubblesView, chartView, heatmapView, cmcView]) {
+  for (const view of [bubblesView]) {
     view.webContents.setWindowOpenHandler(() => ({
       action: "allow",
       overrideBrowserWindowOptions: {
@@ -523,29 +619,25 @@ function createWindow() {
       },
     }));
 
-    // Ignore beforeunload prompts (e.g. TradingView unsaved changes) so setSymbol loadURL doesn't hang
     view.webContents.on('will-prevent-unload', (event) => {
       event.preventDefault();
     });
   }
 
-  // z-order: panes first, splitters on top so drag works
-  // cmcView goes between panes and splitters so splitters stay on top
   mainWindow.contentView.addChildView(controlView);
   mainWindow.contentView.addChildView(bubblesView);
-  mainWindow.contentView.addChildView(chartView);
-  mainWindow.contentView.addChildView(heatmapView);
-  mainWindow.contentView.addChildView(cmcView);
   mainWindow.contentView.addChildView(aiView);
   mainWindow.contentView.addChildView(leftSplit);
   mainWindow.contentView.addChildView(rightSplit);
   mainWindow.contentView.addChildView(cmcSplit);
 
+  const activeTab = workspaceTabs.find(t => t.id === activeTabId) || workspaceTabs[0] || { id: "tab-1", ticker: currentTicker, exchange: currentExchange };
+  if (!tabPanes.has(activeTab.id)) {
+    buildTabPanes(activeTab.id, activeTab.ticker, activeTab.exchange);
+  }
+  attachTabPanes(activeTab.id);
+
   bubblesView.webContents.loadURL(bubblesUrl());
-  chartView.webContents.loadURL(tradingViewUrl(currentTicker, currentExchange));
-  heatmapView.webContents.loadURL(coinGlassUrl(currentTicker, currentExchange));
-  // Load CMC charts page by default (shown when user opens the panel)
-  cmcView.webContents.loadURL(cmcChartsUrl());
 
   layout();
   mainWindow.on("resize", layout);
@@ -556,16 +648,15 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     saveSettings();
+    destroyAllTabPanes();
     mainWindow = null;
     controlView = null;
     bubblesView = null;
-    chartView = null;
-    heatmapView = null;
-    cmcView = null;
     leftSplit = null;
     rightSplit = null;
     cmcSplit = null;
   });
+
 
   controlView.webContents.on("before-input-event", (_event, input) => {
     if (input.control && input.shift && input.key.toLowerCase() === "i") {
@@ -604,6 +695,12 @@ ipcMain.on("set-symbol", (_e, payload) => {
 });
 
 ipcMain.on("create-tab", (_e, payload) => {
+  if (workspaceTabs.length >= 10) {
+    if (controlView) {
+      controlView.webContents.send("tab-limit-reached", { max: 10 });
+    }
+    return;
+  }
   const newId = `tab-${Date.now()}`;
   const t = (payload && payload.ticker) ? String(payload.ticker).toUpperCase().replace(/[^A-Z0-9]/g, "") : currentTicker;
   const ex = (payload && payload.exchange) ? String(payload.exchange).toUpperCase().replace(/[^A-Z0-9]/g, "") : currentExchange;
@@ -613,16 +710,35 @@ ipcMain.on("create-tab", (_e, payload) => {
     exchange: ex,
     label: `${ex}: ${t}`
   };
+  
+  detachTabPanes(activeTabId);
   workspaceTabs.push(newTab);
   activeTabId = newId;
-  setSymbol({ ticker: t, exchange: ex });
+  setSymbol({ ticker: t, exchange: ex }, { reload: false });
+
+  buildTabPanes(newId, t, ex);
+  attachTabPanes(newId);
+  layout();
+  saveSettings();
+  broadcastState();
 });
 
 ipcMain.on("switch-tab", (_e, tabId) => {
+  if (activeTabId === tabId) return;
   const target = workspaceTabs.find(t => t.id === tabId);
   if (!target) return;
+
+  detachTabPanes(activeTabId);
   activeTabId = tabId;
-  setSymbol({ ticker: target.ticker, exchange: target.exchange });
+  setSymbol({ ticker: target.ticker, exchange: target.exchange }, { reload: false });
+
+  if (!tabPanes.has(tabId)) {
+    buildTabPanes(tabId, target.ticker, target.exchange);
+  }
+  attachTabPanes(tabId);
+  layout();
+  saveSettings();
+  broadcastState();
 });
 
 ipcMain.on("close-tab", (_e, tabId) => {
@@ -630,16 +746,27 @@ ipcMain.on("close-tab", (_e, tabId) => {
   const idx = workspaceTabs.findIndex(t => t.id === tabId);
   if (idx === -1) return;
 
+  const wasActive = (activeTabId === tabId);
   workspaceTabs.splice(idx, 1);
-  if (activeTabId === tabId) {
+
+  if (wasActive) {
+    detachTabPanes(tabId);
     const nextTab = workspaceTabs[Math.max(0, idx - 1)];
     activeTabId = nextTab.id;
-    setSymbol({ ticker: nextTab.ticker, exchange: nextTab.exchange });
-  } else {
-    saveSettings();
-    broadcastState();
+    setSymbol({ ticker: nextTab.ticker, exchange: nextTab.exchange }, { reload: false });
+
+    if (!tabPanes.has(activeTabId)) {
+      buildTabPanes(activeTabId, nextTab.ticker, nextTab.exchange);
+    }
+    attachTabPanes(activeTabId);
+    layout();
   }
+
+  destroyTabPanes(tabId);
+  saveSettings();
+  broadcastState();
 });
+
 
 ipcMain.on("rename-tab", (_e, payload) => {
   if (!payload || !payload.id || !payload.label) return;
@@ -768,20 +895,24 @@ ipcMain.on("end-resize", () => {
 
 ipcMain.on("reload-pane", (_e, pane) => {
   if (pane === "bubbles" && bubblesView) bubblesView.webContents.reload();
-  if (pane === "chart" && chartView) chartView.webContents.reload();
-  if (pane === "heatmap" && heatmapView) heatmapView.webContents.reload();
-  if (pane === "cmc" && cmcView) cmcView.webContents.reload();
+  const activePanes = getActiveTabPanes();
+  if (!activePanes) return;
+  if (pane === "chart" && activePanes.chartView) activePanes.chartView.webContents.reload();
+  if (pane === "heatmap" && activePanes.heatmapView) activePanes.heatmapView.webContents.reload();
+  if (pane === "cmc" && activePanes.cmcView) activePanes.cmcView.webContents.reload();
 });
 
 ipcMain.on("navigate-pane", (_e, pane) => {
   if (pane === "bubbles" && bubblesView) {
     bubblesView.webContents.loadURL(bubblesUrl());
   }
-  if (pane === "chart" && chartView) {
-    chartView.webContents.loadURL(tradingViewUrl(currentTicker, currentExchange));
+  const activePanes = getActiveTabPanes();
+  if (!activePanes) return;
+  if (pane === "chart" && activePanes.chartView) {
+    activePanes.chartView.webContents.loadURL(tradingViewUrl(currentTicker, currentExchange));
   }
-  if (pane === "heatmap" && heatmapView) {
-    heatmapView.webContents.loadURL(coinGlassUrl(currentTicker, currentExchange));
+  if (pane === "heatmap" && activePanes.heatmapView) {
+    activePanes.heatmapView.webContents.loadURL(coinGlassUrl(currentTicker, currentExchange));
   }
 });
 
@@ -794,7 +925,9 @@ ipcMain.on("cmc-toggle", () => {
 });
 
 ipcMain.on("cmc-tab", (_e, tab) => {
-  if (!cmcView) return;
+  const activePanes = getActiveTabPanes();
+  if (!activePanes || !activePanes.cmcView) return;
+  const cmcView = activePanes.cmcView;
   cmcActiveTab = tab;
   
   if (tab === "market") {
@@ -812,6 +945,7 @@ ipcMain.on("cmc-tab", (_e, tab) => {
   
   broadcastState();
 });
+
 
 ipcMain.on("toggle-ai", () => {
   aiPanelOpen = !aiPanelOpen;

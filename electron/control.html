@@ -636,6 +636,12 @@
 
       window.hub.getState().then(applyState);
       window.hub.onState(applyState);
+      if (window.hub.onTabLimitReached) {
+        window.hub.onTabLimitReached(({ max }) => {
+          alert(`Maximum limit of ${max} tabs reached. Please close an existing tab before opening a new one.`);
+        });
+      }
     </script>
+
   </body>
 </html>
