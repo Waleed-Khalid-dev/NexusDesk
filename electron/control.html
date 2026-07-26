@@ -17,14 +17,15 @@
         height: 100%;
         overflow: hidden;
         font-family: "Inter", system-ui, -apple-system, sans-serif;
-        background: #09090b;
+        background: transparent;
         color: #f4f4f5;
         user-select: none;
         -webkit-app-region: drag;
       }
       /* Dark translucent gradient background */
       .bar {
-        height: 100%;
+        height: 78px;
+        max-height: 78px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -311,6 +312,132 @@
         font-weight: 500;
       }
 
+      /* Watchlist Dock Styles */
+      .btn-wl-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        background: #18181b;
+        border: 1px solid #27272a;
+        color: #a1a1aa;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-app-region: no-drag;
+      }
+      .btn-wl-action:hover {
+        background: #27272a;
+        color: #fafafa;
+        border-color: #3f3f46;
+      }
+      .btn-wl-action.active {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.4);
+      }
+      .btn-wl-action.active:hover {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.4);
+      }
+      .btn-wl-action.active .save-unsave-state {
+        display: none !important;
+      }
+      .btn-wl-action.active:hover .save-saved-state {
+        display: none !important;
+      }
+      .btn-wl-action.active:hover .save-unsave-state {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 5px;
+      }
+      .watchlist-drawer {
+        display: none;
+        position: absolute;
+        top: 42px;
+        right: 180px;
+        width: 260px;
+        max-height: 380px;
+        background: #18181be6;
+        backdrop-filter: blur(12px);
+        border: 1px solid #27272a;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+        z-index: 9999;
+        overflow-y: auto;
+        padding: 8px 0;
+        -webkit-app-region: no-drag;
+      }
+      .watchlist-drawer.visible {
+        display: block;
+      }
+      .wl-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 12px;
+        font-size: 10px;
+        font-weight: 700;
+        color: #71717a;
+        letter-spacing: 0.05em;
+      }
+      .wl-close {
+        cursor: pointer;
+        color: #71717a;
+        font-size: 12px;
+        padding: 2px 4px;
+      }
+      .wl-close:hover {
+        color: #fafafa;
+      }
+      .wl-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 4px;
+      }
+      .wl-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #d4d4d8;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+      .wl-item:hover {
+        background: #27272a;
+        color: #fafafa;
+      }
+      .wl-item-action {
+        color: #71717a;
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .wl-item-action:hover {
+        color: #fafafa;
+        background: #3f3f46;
+      }
+      .chip .chip-del {
+        margin-left: 4px;
+        color: #71717a;
+        font-weight: 800;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      .chip:hover .chip-del {
+        opacity: 1;
+      }
+      .chip .chip-del:hover {
+        color: #ef4444;
+      }
+
       /* Separator line above CMC panel */
       .cmc-divider {
         display: none;
@@ -441,7 +568,27 @@
           <span class="t" id="active">BTC</span>
         </div>
 
-        <div class="spacer"></div>
+        <div class="spacer" style="display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-right: 8px;">
+          <button class="btn-wl-action" id="btnSaveActive" title="Bookmark Active Ticker to Watchlist">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+            Save <span id="saveActiveLabel">BTC</span>
+          </button>
+          <button class="btn-wl-action" id="btnToggleWl" title="Open Watchlist Drawer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            Watchlist (<span id="wlCount">10</span>) ▾
+          </button>
+        </div>
+        <div class="watchlist-drawer" id="wlDrawer">
+          <div class="wl-header">
+            <span>SAVED WATCHLIST (<span id="wlDrawerCount">10</span>)</span>
+            <span class="wl-close" id="wlDrawerClose" title="Close">✕</span>
+          </div>
+          <div class="wl-list" id="wlSavedList"></div>
+          <div class="wl-header" style="margin-top: 10px; border-top: 1px solid #27272a; padding-top: 8px;">
+            <span>RECENT SESSION HISTORY</span>
+          </div>
+          <div class="wl-list" id="wlRecentList"></div>
+        </div>
 
         <!-- TOOLBAR CLUSTER -->
         <div class="toolbar">
@@ -518,6 +665,8 @@
         cmcActiveTab: "market",
         leftPct: 0.22,
         rightPct: 0.28,
+        watchlist: ["BTC", "ETH", "SOL", "VET", "TAO", "XRP", "BNB", "DOGE", "ADA", "AVAX"],
+        recentCoins: [],
         quick: ["BTC", "ETH", "SOL", "XRP", "BNB", "DOGE", "ADA", "AVAX", "LINK", "DOT", "SUI", "PEPE"],
       };
 
@@ -530,23 +679,142 @@
 
       function renderQuick() {
         quick.innerHTML = "";
-        const tag = document.createElement("span");
-        tag.className = "quick-label";
-        tag.textContent = "Quick:";
-        quick.appendChild(tag);
+        
+        // SAVED WATCHLIST TIER
+        const savedTag = document.createElement("span");
+        savedTag.className = "quick-label";
+        savedTag.style.color = "#10b981";
+        savedTag.textContent = "📌 SAVED:";
+        quick.appendChild(savedTag);
 
-        for (const c of state.quick) {
+        const wl = state.watchlist || state.quick || [];
+        for (const c of wl) {
           const b = document.createElement("button");
           b.className = "chip" + (c === state.ticker ? " on" : "");
-          b.textContent = c;
-          b.onclick = () => window.hub.setSymbol({ ticker: c, exchange: state.exchange });
+          b.innerHTML = `${c} <span class="chip-del" title="Remove from Watchlist">✕</span>`;
+          b.onclick = (e) => {
+            if (e.target && e.target.classList.contains("chip-del")) {
+              e.stopPropagation();
+              window.hub.removeWatchlist(c);
+            } else {
+              window.hub.setSymbol({ ticker: c, exchange: state.exchange });
+            }
+          };
           quick.appendChild(b);
+        }
+
+        // RECENT HISTORY TIER
+        const recent = state.recentCoins || [];
+        if (recent.length > 0) {
+          const div = document.createElement("span");
+          div.style.cssText = "color: #3f3f46; margin: 0 4px;";
+          div.textContent = "|";
+          quick.appendChild(div);
+
+          const recentTag = document.createElement("span");
+          recentTag.className = "quick-label";
+          recentTag.style.color = "#a1a1aa";
+          recentTag.textContent = "🕒 RECENT:";
+          quick.appendChild(recentTag);
+
+          for (const c of recent) {
+            const b = document.createElement("button");
+            b.className = "chip" + (c === state.ticker ? " on" : "");
+            b.style.borderColor = "#3f3f46";
+            b.innerHTML = `${c} <span class="chip-del" style="color: #10b981;" title="Pin to Watchlist">📌</span>`;
+            b.onclick = (e) => {
+              if (e.target && e.target.classList.contains("chip-del")) {
+                e.stopPropagation();
+                window.hub.pinRecent(c);
+              } else {
+                window.hub.setSymbol({ ticker: c, exchange: state.exchange });
+              }
+            };
+            quick.appendChild(b);
+          }
         }
 
         const hint = document.createElement("span");
         hint.className = "hint";
         hint.textContent = "Drag green bars between panes to resize · Layout & Logins persist automatically.";
         quick.appendChild(hint);
+
+        renderWatchlistDrawer();
+        updateTopBarButtons();
+      }
+
+      function updateTopBarButtons() {
+        const btnSave = document.getElementById("btnSaveActive");
+        const saveLabel = document.getElementById("saveActiveLabel");
+        const wlCount = document.getElementById("wlCount");
+        const wlDrawerCount = document.getElementById("wlDrawerCount");
+        
+        const wl = state.watchlist || [];
+        if (saveLabel) saveLabel.textContent = state.ticker || "BTC";
+        if (wlCount) wlCount.textContent = wl.length;
+        if (wlDrawerCount) wlDrawerCount.textContent = wl.length;
+
+        if (btnSave) {
+          const isSaved = wl.includes(state.ticker);
+          btnSave.classList.toggle("active", isSaved);
+          btnSave.innerHTML = isSaved 
+            ? `<span class="save-saved-state" style="display: inline-flex; align-items: center; gap: 5px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg> Saved <span style="color:#fafafa;">${state.ticker}</span></span><span class="save-unsave-state" style="display: none;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Unsave <span style="color:#fafafa;">${state.ticker}</span></span>`
+            : `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg> + Save <span style="color:#fafafa;">${state.ticker}</span>`;
+          btnSave.onclick = () => {
+            if (isSaved) {
+              window.hub.removeWatchlist(state.ticker);
+            } else {
+              window.hub.addWatchlist(state.ticker);
+            }
+          };
+        }
+      }
+
+      function renderWatchlistDrawer() {
+        const savedList = document.getElementById("wlSavedList");
+        const recentList = document.getElementById("wlRecentList");
+        if (!savedList || !recentList) return;
+
+        savedList.innerHTML = "";
+        recentList.innerHTML = "";
+
+        const wl = state.watchlist || [];
+        for (const c of wl) {
+          const item = document.createElement("div");
+          item.className = "wl-item";
+          item.innerHTML = `<span><strong style="color: #fafafa;">${c}</strong> / USDT</span> <span class="wl-item-action" title="Remove">✕</span>`;
+          item.onclick = (e) => {
+            if (e.target && e.target.classList.contains("wl-item-action")) {
+              e.stopPropagation();
+              window.hub.removeWatchlist(c);
+            } else {
+              window.hub.setSymbol({ ticker: c, exchange: state.exchange });
+              setDrawerVisible(false);
+            }
+          };
+          savedList.appendChild(item);
+        }
+
+        const rec = state.recentCoins || [];
+        if (rec.length === 0) {
+          recentList.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #52525b;">No recent coins yet</div>`;
+        } else {
+          for (const c of rec) {
+            const item = document.createElement("div");
+            item.className = "wl-item";
+            item.innerHTML = `<span><strong style="color: #a1a1aa;">${c}</strong> / USDT</span> <span class="wl-item-action" style="color: #10b981;" title="Pin to Watchlist">📌 Save</span>`;
+            item.onclick = (e) => {
+              if (e.target && e.target.classList.contains("wl-item-action")) {
+                e.stopPropagation();
+                window.hub.pinRecent(c);
+              } else {
+                window.hub.setSymbol({ ticker: c, exchange: state.exchange });
+                setDrawerVisible(false);
+              }
+            };
+            recentList.appendChild(item);
+          }
+        }
       }
 
       function renderToggles() {
@@ -643,6 +911,37 @@
       cmcToggleBtn.onclick = () => window.hub.cmcToggle();
       tabMarket.onclick = () => window.hub.cmcTab("market");
       tabCoin.onclick = () => window.hub.cmcTab("coin");
+
+      const btnSaveActive = document.getElementById("btnSaveActive");
+      const btnToggleWl = document.getElementById("btnToggleWl");
+      const wlDrawer = document.getElementById("wlDrawer");
+      const wlDrawerClose = document.getElementById("wlDrawerClose");
+
+      function setDrawerVisible(visible) {
+        if (!wlDrawer) return;
+        if (visible) {
+          wlDrawer.classList.add("visible");
+        } else {
+          wlDrawer.classList.remove("visible");
+        }
+        if (window.hub && window.hub.setWatchlistDrawerOpen) {
+          window.hub.setWatchlistDrawerOpen(wlDrawer.classList.contains("visible"));
+        }
+      }
+
+      if (btnToggleWl) {
+        btnToggleWl.onclick = () => setDrawerVisible(!wlDrawer.classList.contains("visible"));
+      }
+      if (wlDrawerClose) {
+        wlDrawerClose.onclick = () => setDrawerVisible(false);
+      }
+      document.addEventListener("click", (e) => {
+        if (wlDrawer && wlDrawer.classList.contains("visible") &&
+            !wlDrawer.contains(e.target) &&
+            !btnToggleWl.contains(e.target)) {
+          setDrawerVisible(false);
+        }
+      });
 
       window.hub.getState().then(applyState);
       window.hub.onState(applyState);
