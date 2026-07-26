@@ -28,6 +28,7 @@ Designed for professional traders, NexusDesk eliminates context-switching and br
 
 ## 🚀 Key Features
 
+- **Smart Watchlist Drawer & Hover-to-Unsave** — An interactive, floating glassmorphism watchlist drawer that overlays chart views without shifting vertical layout bounds or obscuring active panes. Includes an intuitive hover-to-unsave dual-state action directly in the top navigation bar for rapid watchlist management without interrupting charting workflows.
 - **Multi-Tab Workspace Monitoring (Option B Engine)** — Monitor different cryptocurrencies and exchanges simultaneously across independent tabs without breaking or reloading previous views. Powered by background Chromium processes (`WebContentsView`) with zero-flicker instant switching (<1ms) and an intelligent 10-tab resource cap to safeguard system memory.
 - **Perpetual Futures (`.P`) Auto-Open Engine** — Integrated Market Type selector (`⚡ PERP (.P)` vs `🔘 SPOT`) in the top control bar that automatically routes TradingView chart URLs to perpetual derivative contracts across major exchanges (Binance, Bybit, MEXC, OKX, Bitget, Kucoin) so futures traders get instant derivative charting without manual searching.
 - **Massive 400+ CoinMarketCap Coverage & Search Fallback** — Instant coin intelligence powered by an internal dictionary of over 400+ Layer 1s, DeFi protocols, AI tokens, memecoins, and gaming assets, supplemented by an intelligent search query fallback (`/search/?query=SYMBOL`) that completely eliminates 404 broken page errors.
