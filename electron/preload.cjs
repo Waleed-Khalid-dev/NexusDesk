@@ -28,6 +28,10 @@ contextBridge.exposeInMainWorld("hub", {
   switchTab: (tabId) => ipcRenderer.send("switch-tab", tabId),
   closeTab: (tabId) => ipcRenderer.send("close-tab", tabId),
   renameTab: (payload) => ipcRenderer.send("rename-tab", payload),
+  addWatchlist: (coin) => ipcRenderer.send("add-watchlist", coin),
+  removeWatchlist: (coin) => ipcRenderer.send("remove-watchlist", coin),
+  pinRecent: (coin) => ipcRenderer.send("pin-recent", coin),
+  setWatchlistDrawerOpen: (isOpen) => ipcRenderer.send("set-watchlist-drawer-open", isOpen),
   onTabLimitReached: (cb) => {
     const handler = (_e, data) => cb(data);
     ipcRenderer.on("tab-limit-reached", handler);

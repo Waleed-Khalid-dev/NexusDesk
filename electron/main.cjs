@@ -85,6 +85,12 @@ const TOP_COINS = [
   "PEPE",
 ];
 
+let watchlist = [
+  "BTC", "ETH", "SOL", "VET", "TAO", "XRP", "BNB", "DOGE", "ADA", "AVAX"
+];
+let recentCoins = [];
+let watchlistDrawerOpen = false;
+
 function settingsPath() {
   return path.join(app.getPath("userData"), "hub-settings.json");
 }
@@ -120,6 +126,13 @@ function loadSettings() {
       activeTabId = workspaceTabs[0].id;
     }
 
+    if (Array.isArray(data.watchlist) && data.watchlist.length > 0) {
+      watchlist = data.watchlist.map(c => String(c).toUpperCase().replace(/[^A-Z0-9]/g, "")).filter(Boolean);
+    }
+    if (Array.isArray(data.recentCoins)) {
+      recentCoins = data.recentCoins.map(c => String(c).toUpperCase().replace(/[^A-Z0-9]/g, "")).filter(Boolean);
+    }
+
     const activeTab = workspaceTabs.find(t => t.id === activeTabId);
     if (activeTab) {
       currentTicker = activeTab.ticker;
@@ -148,6 +161,8 @@ function saveSettings() {
           aiWidth,
           workspaceTabs,
           activeTabId,
+          watchlist,
+          recentCoins,
         },
         null,
         2
@@ -696,6 +711,10 @@ function attachTabPanes(tabId) {
       try { mainWindow.contentView.removeChildView(cmcSplit); } catch (e) {}
       try { mainWindow.contentView.addChildView(cmcSplit); } catch (e) {}
     }
+    if (controlView && !controlView.webContents.isDestroyed()) {
+      try { mainWindow.contentView.removeChildView(controlView); } catch (e) {}
+      try { mainWindow.contentView.addChildView(controlView); } catch (e) {}
+    }
   } catch (e) {}
 }
 
@@ -763,7 +782,14 @@ function layout() {
   const bodyH = Math.max(0, height - TOP_H - panelH - splitH);
 
   if (controlView) {
-    controlView.setBounds({ x: 0, y: 0, width, height: TOP_H });
+    const ctrlH = watchlistDrawerOpen ? Math.min(height, TOP_H + 420) : TOP_H;
+    controlView.setBounds({ x: 0, y: 0, width, height: ctrlH });
+    if (watchlistDrawerOpen && !controlView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed() && mainWindow.contentView) {
+      try {
+        mainWindow.contentView.removeChildView(controlView);
+        mainWindow.contentView.addChildView(controlView);
+      } catch (e) {}
+    }
   }
 
   // --- CMC Splitter and Panel ---
@@ -876,7 +902,9 @@ function statePayload() {
     aiWidth,
     workspaceTabs,
     activeTabId,
-    quick: TOP_COINS,
+    watchlist,
+    recentCoins,
+    quick: watchlist,
   };
 }
 
@@ -909,6 +937,10 @@ function setSymbol(payload, { reload = true } = {}) {
   currentTicker = t;
   currentExchange = ex;
   currentMarketType = mt;
+
+  if (!watchlist.includes(t)) {
+    recentCoins = [t, ...recentCoins.filter(c => c !== t)].slice(0, 8);
+  }
 
   // Keep active tab updated
   const currTab = workspaceTabs.find(tab => tab.id === activeTabId);
@@ -984,6 +1016,7 @@ function createWindow() {
       sandbox: false,
     },
   });
+  controlView.setBackgroundColor("#00000000");
   controlView.webContents.loadFile(path.join(__dirname, "control.html"));
 
   bubblesView = createPaneView();
@@ -1088,6 +1121,46 @@ ipcMain.handle("get-state", () => statePayload());
 
 ipcMain.on("set-symbol", (_e, payload) => {
   setSymbol(payload);
+});
+
+ipcMain.on("add-watchlist", (_e, coin) => {
+  const c = String(coin || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (c && !watchlist.includes(c)) {
+    watchlist.push(c);
+    recentCoins = recentCoins.filter(x => x !== c);
+    saveSettings();
+    broadcastState();
+  }
+});
+
+ipcMain.on("remove-watchlist", (_e, coin) => {
+  const c = String(coin || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (c) {
+    watchlist = watchlist.filter(x => x !== c);
+    saveSettings();
+    broadcastState();
+  }
+});
+
+ipcMain.on("pin-recent", (_e, coin) => {
+  const c = String(coin || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (c && !watchlist.includes(c)) {
+    watchlist.push(c);
+    recentCoins = recentCoins.filter(x => x !== c);
+    saveSettings();
+    broadcastState();
+  }
+});
+
+ipcMain.on("set-watchlist-drawer-open", (_e, isOpen) => {
+  watchlistDrawerOpen = !!isOpen;
+  if (controlView && !controlView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed() && mainWindow.contentView) {
+    try {
+      mainWindow.contentView.removeChildView(controlView);
+      mainWindow.contentView.addChildView(controlView);
+    } catch (e) {}
+  }
+  layout();
 });
 
 ipcMain.on("create-tab", (_e, payload) => {
