@@ -1,40 +1,34 @@
 {
-  "name": "nexusdesk",
-  "version": "1.0.0",
-  "description": "Premium desktop crypto trading command center with AI Co-Pilot, arbitrage scanner, and live market intelligence.",
+  "name": "crypto-dashboard",
+  "version": "0.1.0",
   "private": true,
   "main": "electron/main.cjs",
-  "homepage": "https://github.com/Waleed-Khalid-dev/NexusDesk",
-  "author": "NexusDesk",
-  "license": "MIT",
   "scripts": {
-    "start": "electron .",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
     "desktop": "electron .",
-    "build": "electron-builder --win --x64"
-  },
-  "build": {
-    "appId": "com.nexusdesk.app",
-    "productName": "NexusDesk",
-    "win": {
-      "target": "nsis"
-    }
+    "desktop:dev": "electron ."
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "ccxt": "^4.5.67",
+    "electron-store": "^11.0.2",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "sql.js": "^1.14.1"
   },
   "devDependencies": {
-    "electron": "^37.10.3"
-  },
-  "keywords": [
-    "crypto",
-    "trading",
-    "electron",
-    "arbitrage",
-    "ai",
-    "gemini",
-    "coinmarketcap",
-    "binance"
-  ]
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "electron": "^37.10.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
 }
