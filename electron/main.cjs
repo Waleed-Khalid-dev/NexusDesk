@@ -11,10 +11,20 @@ const {
   ipcMain,
   screen,
   safeStorage,
-  Notification
+  Notification,
+  Menu,
+  Tray,
+  nativeImage,
+  dialog,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
+
+// Suppress internal Chromium disk-cache / GPU lock errors in Windows terminal
+app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
+app.commandLine.appendSwitch("log-level", "3");
+app.commandLine.appendSwitch("disable-logging");
+
 const marketIntel = require("./market-intel.cjs");
 const portfolioService = require("./portfolio.cjs");
 
@@ -90,6 +100,7 @@ let watchlist = [
 ];
 let recentCoins = [];
 let watchlistDrawerOpen = false;
+let markdownVaultPath = "";
 
 function settingsPath() {
   return path.join(app.getPath("userData"), "hub-settings.json");
@@ -111,6 +122,7 @@ function loadSettings() {
       currentExchange = data.exchange.toUpperCase().replace(/[^A-Z0-9]/g, "") || "BINANCE";
     if (typeof data.executionMode === "boolean") executionMode = data.executionMode;
     if (typeof data.aiWidth === "number") aiWidth = clamp(data.aiWidth, 260, 800);
+    if (typeof data.markdownVaultPath === "string") markdownVaultPath = data.markdownVaultPath;
 
     if (Array.isArray(data.workspaceTabs) && data.workspaceTabs.length > 0) {
       workspaceTabs = data.workspaceTabs.map(t => ({
@@ -163,6 +175,7 @@ function saveSettings() {
           activeTabId,
           watchlist,
           recentCoins,
+          markdownVaultPath,
         },
         null,
         2
@@ -914,6 +927,10 @@ function broadcastState() {
   }
 }
 
+// --- Trade Ingestion State ---
+let pendingJournalTrades = [];
+let lastTradeTimestamps = {}; // { [exchangeId]: timestamp }
+
 function setSymbol(payload, { reload = true } = {}) {
   let ticker, exchange, marketType;
   if (typeof payload === "object" && payload !== null) {
@@ -1104,6 +1121,9 @@ app.whenReady().then(async () => {
   } catch (e) {
     console.error("[main] Portfolio DB init failed:", e.message);
   }
+  
+  startTradeIngestionPolling();
+  
   app.on("activate", () => {
     if (BaseWindow.getAllWindows().length === 0) createWindow();
   });
@@ -1118,6 +1138,88 @@ app.on("before-quit", () => {
 });
 
 ipcMain.handle("get-state", () => statePayload());
+
+ipcMain.handle("get-pending-trades", () => pendingJournalTrades.length);
+
+ipcMain.handle("get-first-pending-trade", () => {
+  return pendingJournalTrades.length > 0 ? pendingJournalTrades[0] : null;
+});
+
+ipcMain.handle("test-inject-trade", () => {
+  pendingJournalTrades.push({
+    id: `test-mock-${Date.now()}`,
+    exchange: "binance",
+    symbol: "BTC/USDT",
+    side: "buy",
+    amount: 0.1,
+    price: 65000,
+    cost: 6500,
+    fee: 0.05,
+    timestamp: Date.now(),
+    datetime: new Date().toISOString(),
+  });
+  broadcastState();
+  return true;
+});
+
+let journalModalWin = null;
+
+ipcMain.on("open-journal-modal", () => {
+  if (journalModalWin && !journalModalWin.isDestroyed()) {
+    journalModalWin.focus();
+    return;
+  }
+  
+  journalModalWin = new BrowserWindow({
+    width: 320,
+    height: 380,
+    title: "Review Trade",
+    backgroundColor: "#00000000",
+    transparent: true,
+    frame: false,
+    autoHideMenuBar: true,
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+  
+  journalModalWin.on('closed', () => {
+    journalModalWin = null;
+  });
+  
+  journalModalWin.loadFile(path.join(__dirname, "review-trade.html"));
+});
+
+const markdownSync = require("./markdown-sync.cjs");
+
+ipcMain.on("submit-journal-enrichment", (_e, data) => {
+  const { tradeId, tags } = data;
+  const tradeIndex = pendingJournalTrades.findIndex(t => t.id === tradeId);
+  if (tradeIndex > -1) {
+    const trade = pendingJournalTrades[tradeIndex];
+    trade.tags = tags;
+    
+    console.log(`[main] Trade ${tradeId} enriched with tags:`, tags);
+    
+    // 1. Save to SQLite DB
+    portfolioService.insertTrade(app.getPath("userData"), trade);
+    
+    // 2. Sync to Markdown Vault (if configured)
+    if (markdownVaultPath) {
+      try {
+        markdownSync.syncTradeToMarkdown(markdownVaultPath, trade);
+      } catch (err) {
+        console.error("[Markdown Sync] Error writing file:", err);
+      }
+    }
+    
+    // Remove from pending queue
+    pendingJournalTrades.splice(tradeIndex, 1);
+    broadcastState();
+  }
+});
 
 ipcMain.on("set-symbol", (_e, payload) => {
   setSymbol(payload);
@@ -1712,6 +1814,57 @@ ipcMain.on("open-portfolio", () => {
   });
   win.loadFile(path.join(__dirname, "portfolio.html"));
 });
+
+ipcMain.on("open-journal-dashboard", () => {
+  const win = new BrowserWindow({
+    width: 900,
+    height: 800,
+    title: "Trading Journal Dashboard",
+    backgroundColor: "#09090b",
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+  win.loadFile(path.join(__dirname, "journal.html"));
+});
+
+ipcMain.handle("get-trades", () => {
+  try {
+    return { success: true, trades: portfolioService.getTrades() };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// --- Markdown Vault IPC Handlers ---
+
+ipcMain.handle("select-vault-directory", async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Select Obsidian Markdown Vault Folder'
+  });
+  if (result.canceled || result.filePaths.length === 0) {
+    return { path: null };
+  }
+  return { path: result.filePaths[0] };
+});
+
+ipcMain.handle("save-vault-path", (_e, vaultPath) => {
+  try {
+    markdownVaultPath = vaultPath;
+    saveSettings();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("get-vault-path", () => {
+  return { path: markdownVaultPath || "" };
+});
+
 
 ipcMain.handle("save-api-key", (_e, exchange, apiKey, apiSecret) => {
   try {
@@ -2351,3 +2504,90 @@ ipcMain.handle("get-pnl-history", (_e, days = 30) => {
     return { success: false, error: err.message };
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 8: Trade Ingestion Engine
+// ═══════════════════════════════════════════════════════════════════════════
+
+function startTradeIngestionPolling() {
+  const POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+  async function pollTrades() {
+    const keys = loadKeys();
+    const exchangeIds = Object.keys(keys).filter(
+      k => !["gemini", "cmc", "lunarcrush", "cryptocompare"].includes(k)
+    );
+
+    if (exchangeIds.length === 0) return;
+
+    const ccxt = require("ccxt");
+    let hasNewTrades = false;
+
+    for (const exId of exchangeIds) {
+      if (!ccxt[exId] || !keys[exId]?.key) continue;
+      try {
+        const k = safeStorage.decryptString(Buffer.from(keys[exId].key, "base64"));
+        const s = safeStorage.decryptString(Buffer.from(keys[exId].secret, "base64"));
+        const exchange = new ccxt[exId]({ apiKey: k, secret: s, enableRateLimit: true });
+        
+        // Fetch since the last timestamp, or 24h ago if first run
+        const since = lastTradeTimestamps[exId] || (Date.now() - 24 * 60 * 60 * 1000);
+        
+        let trades = [];
+        try {
+          if (exchange.has['fetchMyTrades']) {
+            trades = await exchange.fetchMyTrades(undefined, since);
+          }
+        } catch (e) {
+          console.warn(`[Trade Ingestion] Could not fetch trades for ${exId}:`, e.message);
+        }
+
+        if (trades && trades.length > 0) {
+          for (const t of trades) {
+            // Ignore if we've seen it or it's before our tracking started
+            if (t.timestamp <= since) continue;
+            
+            // Generate a unique ID if CCXT didn't provide one
+            const id = t.id || `${exId}-${t.symbol}-${t.timestamp}-${t.side}`;
+            
+            // Check if already in pending list
+            if (!pendingJournalTrades.find(pt => pt.id === id)) {
+              console.log(`[Trade Ingestion] Found new trade on ${exId}: ${t.symbol} ${t.side}`);
+              pendingJournalTrades.push({
+                id,
+                exchange: exId,
+                symbol: t.symbol,
+                side: t.side,
+                amount: t.amount,
+                price: t.price,
+                cost: t.cost,
+                fee: t.fee,
+                timestamp: t.timestamp,
+                datetime: t.datetime,
+              });
+              hasNewTrades = true;
+            }
+          }
+          
+          // Update the high-water mark for this exchange
+          const maxTs = Math.max(...trades.map(t => t.timestamp || 0));
+          if (maxTs > since) {
+            lastTradeTimestamps[exId] = maxTs;
+          }
+        }
+      } catch (e) {
+        console.warn(`[Trade Ingestion] Failed polling ${exId}:`, e.message);
+      }
+    }
+
+    if (hasNewTrades) {
+      broadcastState();
+    }
+  }
+
+  // Initial poll after 10s to let UI load
+  setTimeout(() => {
+    pollTrades();
+    setInterval(pollTrades, POLLING_INTERVAL_MS);
+  }, 10000);
+}
