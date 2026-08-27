@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Trading Journal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #09090b;
+        --bg-raised: #18181b;
+        --border: #27272a;
+        --border-lit: #3f3f46;
+        --text-hi: #fafafa;
+        --text-mid: #a1a1aa;
+        --text-lo: #71717a;
+        --accent-green: #10b981;
+        --accent-amber: #f59e0b;
+        --accent-red: #ef4444;
+      }
+      body {
+        margin: 0; padding: 0;
+        background: var(--bg); color: var(--text-hi);
+        font-family: 'Inter', system-ui, sans-serif;
+        user-select: none;
+      }
+      .container { padding: 24px; max-width: 800px; margin: 0 auto; }
+      .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+      .page-icon { width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+      .page-icon svg { width: 24px; height: 24px; color: #fff; }
+      .page-title h1 { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+      .page-title p { margin: 0; font-size: 13px; color: var(--text-mid); }
+      
+      .card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+      .card-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-hi); margin-bottom: 16px; }
+      .card-title svg { width: 16px; height: 16px; color: #3b82f6; }
+      
+      .form-group { margin-bottom: 16px; }
+      .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-mid); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+      input[type="text"] { width: 100%; box-sizing: border-box; background: var(--bg); border: 1px solid var(--border-lit); color: var(--text-hi); padding: 10px 12px; border-radius: 8px; font-family: inherit; font-size: 13px; transition: border-color 0.2s; outline: none; }
+      input[type="text"]:focus { border-color: #3b82f6; }
+      
+      .btn {
+        background: var(--accent-green); color: #000;
+        border: none; padding: 10px 18px; border-radius: 8px;
+        font-weight: 600; font-size: 13px; cursor: pointer;
+        transition: all 0.2s; outline: none;
+      }
+      .btn:hover { filter: brightness(1.1); box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3); }
+      .btn:active { transform: scale(0.98); }
+      .btn-ghost { background: transparent; color: var(--text-mid); border: 1px solid var(--border-lit); }
+      .btn-ghost:hover { background: var(--bg-raised); color: var(--text-hi); box-shadow: none; }
+      
+      .status-msg { margin-top: 12px; font-size: 12px; padding: 9px 13px; border-radius: 8px; display: none; animation: fade-in 0.2s ease; }
+      @keyframes fade-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+      .status-ok { background: rgba(16, 185, 129, 0.08); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.2); }
+      .status-err { background: rgba(239, 68, 68, 0.08); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.2); }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-header">
+        <div class="page-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        </div>
+        <div class="page-title">
+          <h1>Trading Journal Dashboard</h1>
+          <p>Review your past trades and configure Obsidian Markdown Sync</p>
+        </div>
+      </div>
+
+      <!-- Journal Settings -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Markdown Vault Sync
+        </div>
+        <p style="font-size:12px; color:var(--text-lo); margin-bottom:16px; line-height:1.6;">Configure where your Markdown trading journal is saved. Files will be compatible with Obsidian.</p>
+        
+        <div class="form-group">
+          <label>Vault Path</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="vaultPathInput" placeholder="e.g. C:\Users\Alice\Documents\Obsidian\Trading" readonly style="flex-grow: 1; cursor: not-allowed;" />
+            <button class="btn btn-ghost" id="selectVaultBtn" style="white-space: nowrap;">Browse...</button>
+          </div>
+          <p style="font-size: 11px; color: var(--text-lo); margin-top: 8px;">Leave blank to disable Markdown sync (SQLite will still be used).</p>
+        </div>
+        
+        <div style="margin-top: 16px;">
+          <button class="btn" id="saveVaultBtn">Save Vault Path</button>
+        </div>
+        <div id="vaultStatus" class="status-msg"></div>
+      </div>
+
+      <!-- Trade History -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+          Recent Trades (SQLite Database)
+        </div>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-lit); color: var(--text-mid);">
+                <th style="padding: 10px; font-weight: 600;">Date</th>
+                <th style="padding: 10px; font-weight: 600;">Exchange</th>
+                <th style="padding: 10px; font-weight: 600;">Asset</th>
+                <th style="padding: 10px; font-weight: 600;">Side</th>
+                <th style="padding: 10px; font-weight: 600;">Amount</th>
+                <th style="padding: 10px; font-weight: 600;">Price</th>
+                <th style="padding: 10px; font-weight: 600;">Cost</th>
+                <th style="padding: 10px; font-weight: 600;">Fee</th>
+                <th style="padding: 10px; font-weight: 600;">Tags</th>
+              </tr>
+            </thead>
+            <tbody id="tradesTableBody">
+              <tr>
+                <td colspan="9" style="padding: 20px; text-align: center; color: var(--text-lo);">Loading trades...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require('electron');
+
+      function showVaultStatus(msg, isErr) {
+        const el = document.getElementById('vaultStatus');
+        el.textContent = msg;
+        el.className = 'status-msg ' + (isErr ? 'status-err' : 'status-ok');
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 4000);
+      }
+
+      document.getElementById('selectVaultBtn').onclick = async () => {
+        const res = await ipcRenderer.invoke('select-vault-directory');
+        if (res && res.path) {
+          document.getElementById('vaultPathInput').value = res.path;
+        }
+      };
+
+      document.getElementById('saveVaultBtn').onclick = async () => {
+        const path = document.getElementById('vaultPathInput').value;
+        const res = await ipcRenderer.invoke('save-vault-path', path);
+        if (res.success) {
+          showVaultStatus('Markdown Vault path saved.', false);
+        } else {
+          showVaultStatus('Failed to save: ' + res.error, true);
+        }
+      };
+
+      // Load existing vault path on start
+      ipcRenderer.invoke('get-vault-path').then(res => {
+        if (res.path) {
+          document.getElementById('vaultPathInput').value = res.path;
+        }
+      });
+
+      // Load Recent Trades
+      async function loadTrades() {
+        const tbody = document.getElementById('tradesTableBody');
+        const res = await ipcRenderer.invoke('get-trades');
+        
+        if (!res.success || !res.trades || res.trades.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="9" style="padding: 20px; text-align: center; color: var(--text-lo);">No recent trades found in database.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = res.trades.map(t => {
+          const d = new Date(t.timestamp).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+          const sideColor = t.side.toLowerCase() === 'buy' ? 'var(--accent-green)' : 'var(--accent-red)';
+          const tagsHtml = (t.tags || []).map(tag => 
+            `<span style="background: var(--bg); border: 1px solid var(--border-lit); padding: 2px 6px; border-radius: 4px; font-size: 11px;">${tag}</span>`
+          ).join(' ');
+
+          return `
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 10px; color: var(--text-mid);">${d}</td>
+              <td style="padding: 10px; font-size: 11px; text-transform: capitalize; color: var(--text-mid);">${t.exchange || 'Binance'}</td>
+              <td style="padding: 10px; font-weight: 600;">${t.symbol}</td>
+              <td style="padding: 10px; color: ${sideColor}; font-weight: 600; text-transform: uppercase;">${t.side}</td>
+              <td style="padding: 10px; font-family: monospace;">${t.amount}</td>
+              <td style="padding: 10px; font-family: monospace;">$${t.price}</td>
+              <td style="padding: 10px; font-family: monospace;">$${t.cost}</td>
+              <td style="padding: 10px; font-family: monospace; color: var(--text-mid);">$${t.fee}</td>
+              <td style="padding: 10px;">${tagsHtml}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      loadTrades();
+    </script>
+  </body>
+</html>
