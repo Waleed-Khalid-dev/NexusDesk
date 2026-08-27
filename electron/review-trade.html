@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Review Trade</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background: rgba(24, 24, 27, 0.95);
+        color: #fafafa;
+        overflow: hidden;
+        -webkit-app-region: drag;
+        border: 1px solid #3f3f46;
+        border-radius: 12px;
+      }
+      .modal {
+        padding: 20px;
+        box-sizing: border-box;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      .modal h2 { margin: 0 0 12px; font-size: 16px; color: #fafafa; }
+      .modal-trade-info { font-size: 12px; color: #a1a1aa; margin-bottom: 16px; flex-shrink: 0; }
+      .tag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; flex-grow: 1; -webkit-app-region: no-drag; }
+      .tag-btn { background: #27272a; border: 1px solid #3f3f46; padding: 6px; border-radius: 6px; font-size: 11px; cursor: pointer; color: #a1a1aa; outline: none; }
+      .tag-btn.on { background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #34d399; }
+      .modal-footer { display: flex; justify-content: flex-end; gap: 8px; -webkit-app-region: no-drag; flex-shrink: 0; }
+      .modal-footer button { padding: 6px 12px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; outline: none; }
+      .btn-cancel { background: transparent; color: #a1a1aa; }
+      .btn-submit { background: #10b981; color: #000; }
+    </style>
+  </head>
+  <body>
+    <div class="modal">
+      <h2>Review Trade</h2>
+      <div class="modal-trade-info" id="modalTradeInfo">Loading...</div>
+      <div class="tag-grid" id="modalTagGrid">
+        <button class="tag-btn" data-tag="FOMO">FOMO</button>
+        <button class="tag-btn" data-tag="Revenge">Revenge</button>
+        <button class="tag-btn" data-tag="High Conviction">High Conviction</button>
+        <button class="tag-btn" data-tag="Boredom">Boredom</button>
+        <button class="tag-btn" data-tag="News Catalyst">News Catalyst</button>
+        <button class="tag-btn" data-tag="TA Setup">TA Setup</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="btnCancelJournal">Skip / Later</button>
+        <button class="btn-submit" id="btnSubmitJournal">Save Tags</button>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require("electron");
+
+      const modalTradeInfo = document.getElementById("modalTradeInfo");
+      const btnCancelJournal = document.getElementById("btnCancelJournal");
+      const btnSubmitJournal = document.getElementById("btnSubmitJournal");
+
+      let selectedTags = new Set();
+      let currentPendingTradeId = null;
+
+      async function init() {
+        const trade = await ipcRenderer.invoke("get-first-pending-trade");
+        if (trade) {
+          currentPendingTradeId = trade.id;
+          const cost = trade.cost || (trade.amount * trade.price) || 0;
+          modalTradeInfo.innerHTML = `
+            <strong>${trade.exchange.toUpperCase()}</strong>: ${trade.side.toUpperCase()} ${trade.amount} <strong>${trade.symbol}</strong><br/>
+            Price: $${trade.price} | Cost: $${cost.toFixed(2)}<br/>
+            <span style="font-size:10px; color:#52525b;">${new Date(trade.timestamp).toLocaleString()}</span>
+          `;
+        } else {
+          modalTradeInfo.innerHTML = "No pending trades to review!";
+        }
+      }
+
+      document.querySelectorAll(".tag-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tag = btn.getAttribute("data-tag");
+          if (selectedTags.has(tag)) {
+            selectedTags.delete(tag);
+            btn.classList.remove("on");
+          } else {
+            selectedTags.add(tag);
+            btn.classList.add("on");
+          }
+        });
+      });
+
+      btnCancelJournal.addEventListener("click", () => {
+        window.close();
+      });
+
+      btnSubmitJournal.addEventListener("click", () => {
+        if (currentPendingTradeId) {
+          ipcRenderer.send("submit-journal-enrichment", {
+            tradeId: currentPendingTradeId,
+            tags: Array.from(selectedTags)
+          });
+        }
+        window.close();
+      });
+
+      init();
+    </script>
+  </body>
+</html>
