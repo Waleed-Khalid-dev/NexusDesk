@@ -44,6 +44,23 @@ async function initDB(userDataPath) {
     );
   `);
 
+  // Ensure the trades table exists
+  db.run(`
+    CREATE TABLE IF NOT EXISTS trades (
+      id          TEXT PRIMARY KEY,
+      exchange    TEXT NOT NULL,
+      symbol      TEXT NOT NULL,
+      side        TEXT NOT NULL,
+      amount      REAL NOT NULL,
+      price       REAL NOT NULL,
+      cost        REAL NOT NULL,
+      fee         REAL NOT NULL,
+      timestamp   INTEGER NOT NULL,
+      datetime    TEXT NOT NULL,
+      tags        TEXT NOT NULL DEFAULT '[]'
+    );
+  `);
+
   // Persist the DB to disk immediately after creation
   persistDB(userDataPath);
 
@@ -60,6 +77,47 @@ function persistDB(userDataPath) {
   const dbPath = path.join(userDataPath, DB_FILENAME);
   const data = db.export();
   fs.writeFileSync(dbPath, Buffer.from(data));
+}
+
+// --- TRADES CRUD OPERATIONS ---
+
+function insertTrade(userDataPath, tradeData) {
+  if (!db) return false;
+  
+  const { id, exchange, symbol, side, amount, price, cost, fee, timestamp, datetime, tags } = tradeData;
+  const tagsStr = JSON.stringify(tags || []);
+  
+  db.run(
+    "INSERT OR REPLACE INTO trades (id, exchange, symbol, side, amount, price, cost, fee, timestamp, datetime, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id, exchange, symbol, side, amount, price, cost, fee, timestamp, datetime, tagsStr]
+  );
+  
+  persistDB(userDataPath);
+  return true;
+}
+
+function updateTradeTags(userDataPath, tradeId, tags) {
+  if (!db) return false;
+  
+  const tagsStr = JSON.stringify(tags || []);
+  db.run("UPDATE trades SET tags = ? WHERE id = ?", [tagsStr, tradeId]);
+  
+  persistDB(userDataPath);
+  return true;
+}
+
+function getTrades() {
+  if (!db) return [];
+  
+  const stmt = db.prepare("SELECT * FROM trades ORDER BY timestamp DESC");
+  const rows = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    row.tags = JSON.parse(row.tags || "[]");
+    rows.push(row);
+  }
+  stmt.free();
+  return rows;
 }
 
 /**
@@ -161,6 +219,9 @@ function getLatestSnapshot() {
 module.exports = {
   initDB,
   persistDB,
+  insertTrade,
+  updateTradeTags,
+  getTrades,
   takeSnapshot,
   getHistory,
   getLatestSnapshot,
