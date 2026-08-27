@@ -266,7 +266,26 @@
         color: #fbbf24;
         box-shadow: inset 0 0 0 1px #f59e0b55;
       }
-
+      /* --- JOURNAL BADGE & MODAL --- */
+      .icon-btn.has-badge {
+        position: relative;
+      }
+      .icon-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: #ef4444;
+        color: white;
+        font-size: 9px;
+        font-weight: 800;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        display: none;
+      }
       /* --- QUICK COINS (TICKER TAPE) --- */
       .quick {
         display: flex;
@@ -622,6 +641,13 @@
           <button class="icon-btn" id="openArbitrage" title="Open Arbitrage Scanner" style="color: #fb923c;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4l3 3-3 3"/><path d="M21 7H9"/><path d="M6 20l-3-3 3-3"/><path d="M3 17h12"/></svg>
           </button>
+          <button class="icon-btn" id="openJournalDashboard" title="Open Trading Journal Dashboard" style="color: #f43f5e;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+          </button>
+          <button class="icon-btn has-badge" id="openJournal" title="Review Pending Trades" style="color: #3b82f6;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <div class="icon-badge" id="journalBadge">0</div>
+          </button>
         </div>
 
         <!-- CMC PANEL CONTROLS -->
@@ -945,12 +971,55 @@
 
       window.hub.getState().then(applyState);
       window.hub.onState(applyState);
-      if (window.hub.onTabLimitReached) {
-        window.hub.onTabLimitReached(({ max }) => {
-          alert(`Maximum limit of ${max} tabs reached. Please close an existing tab before opening a new one.`);
+        // Fallback context menu toggle using right-click anywhere else
+        window.addEventListener('contextmenu', (e) => {
+          if (e.target.closest('.cmc-tabs') || e.target.closest('#cmcToggle') || e.target.closest('.modal-overlay')) return;
+          e.preventDefault();
+          window.hub.showContextMenu();
         });
-      }
-    </script>
 
+      // --- Journal Polling ---
+      const journalBadge = document.getElementById("journalBadge");
+      const openJournal = document.getElementById("openJournal");
+
+      async function updateJournalBadge() {
+        try {
+          const count = await window.hub.getPendingTrades();
+          if (count > 0) {
+            journalBadge.textContent = count;
+            journalBadge.style.display = "flex";
+          } else {
+            journalBadge.style.display = "none";
+          }
+        } catch (e) {
+          console.error("Failed to get pending trades:", e);
+        }
+      }
+
+      setInterval(updateJournalBadge, 10000);
+      setTimeout(updateJournalBadge, 2000);
+
+      const openPortfolio = document.getElementById("openPortfolio");
+      const toggleAi = document.getElementById("toggleAi");
+      const openMarketIntel = document.getElementById("openMarketIntel");
+      const openJournalButton = document.getElementById("openJournal");
+      const openJournalDashboard = document.getElementById("openJournalDashboard");
+
+      openPortfolio.addEventListener("click", () => {
+        window.hub.openPortfolio();
+      });
+      toggleAi.addEventListener("click", () => {
+        window.hub.toggleAiCopilot();
+      });
+      openMarketIntel.addEventListener("click", () => {
+        window.hub.openMarketIntel();
+      });
+      openJournalDashboard.addEventListener("click", () => {
+        window.hub.openJournalDashboard();
+      });
+      openJournalButton.addEventListener("click", () => {
+        window.hub.openJournalModal();
+      });
+    </script>
   </body>
 </html>
