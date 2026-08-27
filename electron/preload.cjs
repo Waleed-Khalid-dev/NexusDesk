@@ -37,6 +37,13 @@ contextBridge.exposeInMainWorld("hub", {
     ipcRenderer.on("tab-limit-reached", handler);
     return () => ipcRenderer.removeListener("tab-limit-reached", handler);
   },
+  showContextMenu: () => ipcRenderer.send("show-context-menu"),
+  getPendingTrades: () => ipcRenderer.invoke("get-pending-trades"),
+  getFirstPendingTrade: () => ipcRenderer.invoke("get-first-pending-trade"),
+  submitJournalEnrichment: (data) => ipcRenderer.send("submit-journal-enrichment", data),
+  testInjectTrade: () => ipcRenderer.invoke("test-inject-trade"),
+  openJournalModal: () => ipcRenderer.send("open-journal-modal"),
+  openJournalDashboard: () => ipcRenderer.send("open-journal-dashboard"),
+  getTrades: () => ipcRenderer.invoke("get-trades")
 });
-
 
